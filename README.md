@@ -55,7 +55,7 @@ In each project where you want to use these plugins, create or edit `.claude/set
 ```json
 {
   "extraKnownMarketplaces": {
-    "my-configs": {
+    "local": {
       "source": {
         "source": "directory",
         "path": "/home/stefan/claude-configs"
@@ -63,7 +63,7 @@ In each project where you want to use these plugins, create or edit `.claude/set
     }
   },
   "enabledPlugins": {
-    "profile-al-development@my-configs": true
+    "profile-al-development@local": true
   }
 }
 ```

@@ -1,12 +1,24 @@
 {
   "mcpServers": {
+    "microsoft_docs_mcp": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
     "al-mcp-server": {
       "type": "stdio",
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/home/stefan/.npm/_npx/8b806c9e6ec42c23/node_modules/@sxkod/al-mcp-server/dist/index.js"
+        "al-mcp-server"
       ],
       "env": {}
+    },
+    "bc-code-intelligence-mcp": {
+      "type": "stdio",
+      "command": "bc-code-intelligence-mcp",
+      "args": [],
+      "env": {
+        "BC_CODE_INTEL_CONFIG": "~/claude-configs/profile-al-development/bc-code-intel-config.json"
+      }
     }
   }
 }
