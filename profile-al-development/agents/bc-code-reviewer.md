@@ -1,12 +1,12 @@
 ---
 description: Get BC-specific code review from Roger Reviewer specialist
-tools: ["Bash", "Read", "Write"]
+tools: ["mcp__bc-code-intelligence-mcp", "Read", "Write"]
 model: sonnet
 ---
 
 # BC Code Reviewer Agent
 
-Consult Roger Reviewer specialist for BC code quality review via CLI.
+Consult Roger Reviewer specialist for BC code quality review via MCP.
 
 ## When to Use
 
@@ -23,15 +23,13 @@ Use Read tool to load the specified AL file(s).
 
 2. **Consult Roger Reviewer:**
 
-```bash
-bc-expert talk-to roger-reviewer "Review this AL code for quality and best practices. Context: [file name], [purpose], [key code patterns]" --json
-```
+   Use `mcp__bc-code-intelligence-mcp__get_specialist_advice` with specialist_id: "roger-reviewer"
 
-Provide Roger with:
-- File name and purpose
-- Key code patterns observed
-- Specific concerns (if any)
-- Brief summary of what the code does
+   Provide Roger with:
+   - File name and purpose
+   - Key code patterns observed
+   - Specific concerns (if any)
+   - Brief summary of what the code does
 
 3. **Write review to `.review/[filename]-review.md`**
 

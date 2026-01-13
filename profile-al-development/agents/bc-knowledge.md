@@ -1,6 +1,6 @@
 ---
 description: Search BC knowledge base for concepts and best practices. Use when user asks about BC/AL concepts, 'how does X work', 'what is the best practice for', or needs BC feature documentation.
-tools: ["Bash", "Write"]
+tools: ["mcp__bc-code-intelligence-mcp", "Write"]
 model: haiku
 ---
 
@@ -19,15 +19,11 @@ Search BC Code Intelligence knowledge base and retrieve relevant topics.
 
 1. **Search knowledge base:**
 
-```bash
-bc-expert search "<user question>" --json
-```
+   Use `mcp__bc-code-intelligence-mcp__find_bc_knowledge` with the user's question
 
 2. **Get most relevant topic(s):**
 
-```bash
-bc-expert get "<topic-id>" --json
-```
+   Use `mcp__bc-code-intelligence-mcp__get_bc_topic` with the topic ID
 
 3. **Write findings to `.review/knowledge-[topic].md`**
 

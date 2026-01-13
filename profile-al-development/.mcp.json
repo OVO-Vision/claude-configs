@@ -12,6 +12,14 @@
       ],
       "env": {}
     },
+    "bc-code-intelligence-mcp": {
+      "type": "stdio",
+      "command": "bc-code-intelligence-mcp",
+      "args": [],
+      "env": {
+        "BC_CODE_INTEL_CONFIG": "~/claude-configs/profile-al-development/bc-code-intel-config.json"
+      }
+    },
     "serena": {
       "type": "stdio",
       "command": "uv",

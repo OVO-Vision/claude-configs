@@ -1,39 +1,92 @@
+---
+**⚠️ CRITICAL ENFORCEMENT RULE - READ FIRST ⚠️**
+
+**YOU MUST NEVER CALL MCP TOOLS DIRECTLY IN THIS CONVERSATION.**
+
+If you need MCP functionality, you MUST spawn an agent:
+- Need docs? → Spawn `mcp-docs-lookup` agent
+- Need code navigation? → Spawn `mcp-serena` agent
+- Need BC specialist? → Use `/home/stefan/.local/bin/bc-expert` via Bash
+
+**VIOLATION CHECK**: Before ANY tool call, ask yourself:
+- ❓ Am I calling `mcp__serena__*`? → STOP, spawn agent instead
+- ❓ Am I calling `mcp__microsoft_docs_mcp__*`? → STOP, spawn agent instead
+
+**NO EXCEPTIONS.** MCP tools flood the main context with verbose output.
+
+---
+
 # AL Development Configuration
 
 This memory file contains AL (Application Language) development guidelines and patterns for Microsoft Dynamics 365 Business Central.
 
-## MCP Tool Isolation & CLI Tools (IMPORTANT)
+## MCP Tool Isolation & CLI Tools (CRITICAL RULE)
 
-**RULE: Minimize MCP overhead. Use CLI tools where available; delegate MCP calls to agents.**
+**STRICT RULE: NEVER call MCP tools directly in the main conversation. ALWAYS delegate to agents.**
 
-This reduces context bloat and persists findings to files.
+**Prohibited in main conversation:**
+- ❌ `mcp__serena__*` - Use `mcp-serena` agent instead
+- ❌ `mcp__microsoft_docs_mcp__*` - Use `mcp-docs-lookup` agent instead
+- ❌ `mcp__plugin_profile-al-development_*` - Use agents from table below
 
-### Tool Delegation
+**Allowed in main conversation:**
+- ✅ CLI tools via Bash (`bc-expert`, file operations)
+- ✅ Direct file tools (Read, Write, Edit, Glob, Grep)
+- ✅ Git commands
+- ✅ Spawning agents (Task tool)
 
-| Need | Use |
-|------|-----|
-| BC specialist advice | `bc-expert` CLI via Bash (see below) |
-| BC knowledge base | `bc-knowledge` agent |
-| BC code review | `bc-code-reviewer` agent |
-| Microsoft docs lookup | `mcp-docs-lookup` agent |
-| Code navigation (Serena) | `mcp-serena` agent |
-| AL object inspection | `mcp-serena` or direct file tools |
+**Why this matters:** MCP tool results can be verbose (KB of JSON). Agents write to `.review/` files and return concise summaries, keeping main conversation lean.
 
-### BC Specialist CLI Commands
+**ENFORCEMENT - What This Looks Like:**
 
-Use `bc-expert` CLI directly in Bash for BC specialist access:
-
-```bash
-bc-expert ask "<question>"                    # Auto-routes to specialist
-bc-expert talk-to <specialist> "<question>"   # Specific specialist
-bc-expert who-should-help "<question>"        # Find best specialist
-bc-expert specialists --json                  # List all specialists
-bc-expert search "<query>"                    # Search knowledge base
-bc-expert get "<topic-id>"                    # Get topic details
-bc-expert analyze --code workspace            # Analyze AL code
+❌ **WRONG** (Direct MCP call in main conversation):
+```
+User: "Find all references to Customer.Name"
+Claude: [calls mcp__serena__find_references directly]
+Result: 10KB of JSON floods the context
 ```
 
-Agents return **one-line status** and write details to `.review/` files.
+✅ **CORRECT** (Agent delegation):
+```
+User: "Find all references to Customer.Name"
+Claude: [spawns mcp-serena agent]
+Agent: [uses mcp__serena tools in isolated context]
+Agent: [writes to .review/code-references.md]
+Agent: [returns summary: "Found 47 references across 12 files"]
+Claude: "Found 47 references. Details in .review/code-references.md"
+```
+
+**If you catch yourself about to call an MCP tool:**
+1. STOP immediately
+2. Spawn the appropriate agent instead
+3. Let the agent handle MCP interaction
+
+### 🚨 TOOL DELEGATION ENFORCEMENT TABLE 🚨
+
+**CHECK THIS TABLE BEFORE EVERY TOOL CALL:**
+
+| Need | MUST Use | Never Use Directly |
+|------|----------|-------------------|
+| BC specialist advice | **`bc-expert` agent** | ❌ `mcp__bc-code-intelligence-mcp` |
+| BC knowledge base | **`bc-knowledge` agent** | ❌ `mcp__bc-code-intelligence-mcp` |
+| BC code review | **`bc-code-reviewer` agent** | ❌ `mcp__bc-code-intelligence-mcp` |
+| Microsoft docs lookup | **`mcp-docs-lookup` agent** | ❌ `mcp__microsoft_docs_mcp` |
+| Code navigation (Serena) | **`mcp-serena` agent** | ❌ `mcp__serena` |
+| Symbol lookup | **`mcp-serena` agent** | ❌ `mcp__serena` |
+| Find references | **`mcp-serena` agent** | ❌ `mcp__serena` |
+
+### BC Specialist Access (via agents ONLY)
+
+**NEVER use bc-code-intelligence-mcp tools directly.** Always spawn an agent:
+- `bc-expert` agent - General specialist consultation
+- `bc-knowledge` agent - Knowledge base queries
+- `bc-code-reviewer` agent - Code review with Roger
+
+Agents use MCP tools internally but keep verbose output isolated. They return **one-line status** and write details to `.review/` files.
+
+---
+
+**⚠️ REMINDER**: If you just called an MCP tool directly, you violated this rule. Go back and spawn an agent instead. MCP calls in the main conversation are NEVER acceptable.
 
 ---
 

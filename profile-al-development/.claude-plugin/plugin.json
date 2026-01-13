@@ -1,7 +1,7 @@
 {
   "name": "profile-al-development",
   "description": "AL (Application Language) development configuration for Business Central. Includes AL-specific coding standards, patterns, commands, tooling, and specialized agents for large PR analysis.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "author": {
     "name": "Stefan"
   },
