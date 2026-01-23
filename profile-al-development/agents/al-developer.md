@@ -1,7 +1,7 @@
 ---
 description: Implement AL code following the implementation plan. Creates/modifies AL files. Can be called iteratively to fix issues found by code-reviewer or diagnostics-fixer.
 capabilities: ["al-coding", "file-creation", "code-implementation", "syntax-correctness", "iterative-fixes"]
-model: sonnet
+model: opus
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"]
 ---
 

@@ -1,6 +1,6 @@
 # AL Development Profile - Full Lifecycle
 
-**Version:** 2.12.0
+**Version:** 2.15.0
 
 Claude Code profile for Microsoft Dynamics 365 Business Central AL development with intelligent complexity routing and proportional planning.
 

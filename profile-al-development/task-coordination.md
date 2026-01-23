@@ -1,6 +1,6 @@
 # Task Coordination System
 
-**Version:** 2.13.0
+**Version:** 2.15.0
 
 This profile uses Claude Code's native **Tasks** system for workflow coordination, persistence, and multi-agent collaboration.
 

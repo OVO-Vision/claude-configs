@@ -1,7 +1,7 @@
 ---
 description: Review AL code for quality, standards compliance, and potential issues. Determines if iteration to al-developer is needed.
 capabilities: ["code-review", "quality-analysis", "standards-checking", "bug-detection", "iteration-decision"]
-model: sonnet
+model: opus
 tools: ["Read", "Glob", "Grep", "Write"]
 ---
 
