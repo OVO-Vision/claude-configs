@@ -53,6 +53,10 @@ TaskCreate: "Testing"
 TaskCreate: "Test Review"
   - description: "Review test coverage and quality"
   - activeForm: "Reviewing tests"
+
+TaskCreate: "Documentation"
+  - description: "Generate feature and API documentation"
+  - activeForm: "Writing documentation"
 ```
 
 **Then set up dependencies:**
@@ -63,6 +67,7 @@ TaskUpdate: "Code Review" → addBlockedBy: ["Development"]
 TaskUpdate: "Diagnostics" → addBlockedBy: ["Code Review"]
 TaskUpdate: "Testing" → addBlockedBy: ["Diagnostics"]
 TaskUpdate: "Test Review" → addBlockedBy: ["Testing"]
+TaskUpdate: "Documentation" → addBlockedBy: ["Test Review"]
 ```
 
 ## Checking for Existing Tasks/Docs
@@ -171,7 +176,14 @@ ls .dev/01-requirements.md .dev/02-solution-plan.md
 26. **Spawn test-reviewer** (reviews tests)
 27. **TaskUpdate:** "Test Review" → status: "completed"
 28. **Show `.dev/06-test-review.md` summary**
-29. **✅ Done!** All tasks completed.
+
+### Phase 5: Documentation (Automated)
+
+29. **TaskUpdate:** "Documentation" → status: "in_progress"
+30. **Spawn docs-writer** (generates documentation)
+31. **TaskUpdate:** "Documentation" → status: "completed"
+32. **Show documentation summary**
+33. **✅ Done!** All tasks completed.
 
 ## Critical Rules
 

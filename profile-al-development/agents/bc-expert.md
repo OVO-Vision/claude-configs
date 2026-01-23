@@ -1,7 +1,7 @@
 ---
 description: Consult BC Code Intelligence specialists for expert advice on BC/AL development.
 capabilities: ["bc-consultation", "specialist-routing", "expert-advice", "best-practices"]
-model: sonnet
+model: opus
 tools: ["mcp__bc-code-intelligence-mcp", "Write", "Read"]
 ---
 

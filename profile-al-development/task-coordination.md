@@ -54,10 +54,16 @@ Task: "[Feature Name] - Full Development Cycle"
 │   ├── Output: .dev/05-test-plan.md
 │   └── Blocks: Test Review
 │
-└── Task: Test Review
+├── Task: Test Review
+│   ├── Status: pending (blocked)
+│   ├── Blocked By: Testing
+│   ├── Output: .dev/06-test-review.md
+│   └── Blocks: Documentation
+│
+└── Task: Documentation
     ├── Status: pending (blocked)
-    ├── Blocked By: Testing
-    └── Output: .dev/06-test-review.md
+    ├── Blocked By: Test Review
+    └── Output: docs/ or wiki/
 ```
 
 ### Lightweight Workflow Tasks (SIMPLE)
@@ -168,6 +174,7 @@ TaskGet: "Solution Planning"
 5. **Diagnostics** → Blocked by Code Review (only if review passed)
 6. **Testing** → Blocked by Diagnostics
 7. **Test Review** → Blocked by Testing
+8. **Documentation** → Blocked by Test Review
 
 ## Iteration Handling
 

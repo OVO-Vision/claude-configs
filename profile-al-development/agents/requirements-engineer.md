@@ -1,7 +1,7 @@
 ---
 description: Extract and refine requirements from user requests. First step in development cycle.
 capabilities: ["requirements-extraction", "functional-analysis", "non-functional-requirements", "bc-integration-identification"]
-model: sonnet
+model: opus
 tools: ["Read", "Write", "Grep", "Glob"]
 ---
 
