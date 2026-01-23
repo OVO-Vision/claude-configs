@@ -1,6 +1,6 @@
 ---
 description: Run planning phase only (requirements → solution plan) with approval gates
-allowed-tools: ["Task", "Read", "AskUserQuestion"]
+allowed-tools: ["Task", "Read", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TaskList"]
 ---
 
 # Planning Phase
@@ -19,22 +19,46 @@ Runs the two planning agents with approval gates:
 1. Requirements engineering
 2. Solution planning (architecture + implementation)
 
+Creates Tasks for tracking (can be resumed or continued with `/develop`).
+
+## Step 0: Create Tasks
+
+**At start, create planning tasks:**
+
+```
+TaskCreate: "Requirements Analysis"
+  - description: "Extract requirements for: [user request]"
+  - activeForm: "Analyzing requirements"
+
+TaskCreate: "Solution Planning"
+  - description: "Design architecture and implementation plan"
+  - activeForm: "Designing solution"
+
+TaskUpdate: "Solution Planning" → addBlockedBy: ["Requirements Analysis"]
+```
+
 ## Workflow with Approval Gates
 
 ### Step 1: Requirements Analysis
 
-1. **Spawn requirements-engineer** with user's request
-2. **Show `.dev/01-requirements.md` summary**
-3. **🛑 APPROVAL GATE:** Ask user:
+1. **TaskUpdate:** "Requirements Analysis" → status: "in_progress"
+2. **Spawn requirements-engineer** with user's request
+3. **TaskUpdate:** "Requirements Analysis" → status: "completed"
+4. **Show `.dev/01-requirements.md` summary**
+5. **🛑 APPROVAL GATE:** Ask user:
    - ✅ Approve and continue to solution plan
    - 🔄 Refine requirements
    - ❌ Stop here
 
 ### Step 2: Solution Planning
 
-4. **Spawn solution-planner** (reads requirements, uses MCP tools)
-5. **Show `.dev/02-solution-plan.md` summary**
-6. **✅ Done!** Planning complete
+6. **TaskUpdate:** "Solution Planning" → status: "in_progress"
+7. **Spawn solution-planner** (reads requirements, uses MCP tools)
+8. **TaskUpdate:** "Solution Planning" → status: "completed"
+9. **Show `.dev/02-solution-plan.md` summary**
+10. **✅ Done!** Planning complete
+
+**Note:** Tasks remain for `/develop` or `/dev-cycle` to continue.
 
 ## Critical Rules
 

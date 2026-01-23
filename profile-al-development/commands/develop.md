@@ -1,6 +1,6 @@
 ---
 description: Run development phase only (implement → review → fix diagnostics) with iteration loops
-allowed-tools: ["Task", "Read"]
+allowed-tools: ["Task", "Read", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet"]
 ---
 
 # Development Phase
@@ -15,24 +15,66 @@ Run only the development phase with automatic iteration loops for quality.
 
 **Prerequisite:** Must have `.dev/02-solution-plan.md` from planning phase.
 
+## Step 0: Check/Create Tasks
+
+**Check for existing tasks from `/plan`:**
+
+```
+TaskList → Check if Development task exists
+  - If exists and Planning completed → Continue
+  - If not exists → Create development tasks
+```
+
+**Create development tasks if needed:**
+
+```
+TaskCreate: "Development"
+  - description: "Implement AL code per solution plan"
+  - activeForm: "Implementing code"
+
+TaskCreate: "Code Review"
+  - description: "Review code for quality and standards"
+  - activeForm: "Reviewing code"
+
+TaskCreate: "Diagnostics"
+  - description: "Fix compilation issues"
+  - activeForm: "Fixing diagnostics"
+
+TaskUpdate: "Code Review" → addBlockedBy: ["Development"]
+TaskUpdate: "Diagnostics" → addBlockedBy: ["Code Review"]
+```
+
 ## What It Does
 
-Runs development agents with iteration loops:
+Runs development agents with iteration loops and task tracking:
 
 ### Initial Implementation
-1. **Spawn al-developer** - Implement AL code from plan
+1. **TaskUpdate:** "Development" → status: "in_progress"
+2. **Spawn al-developer** - Implement AL code from plan
+3. **TaskUpdate:** "Development" → status: "completed"
 
 ### Code Review Loop (Iterative)
-2. **Spawn code-reviewer** - Review code quality
-3. **Evaluate findings:**
-   - **If Critical/High issues:** ITERATE back to al-developer → Go to step 2
-   - **If only Medium/Low issues:** Continue to step 4
+4. **TaskUpdate:** "Code Review" → status: "in_progress"
+5. **Spawn code-reviewer** - Review code quality
+6. **Evaluate findings:**
+   - **If Critical/High issues:**
+     - TaskUpdate: "Code Review" → status: "completed", metadata: {passed: false}
+     - TaskUpdate: "Development" → status: "in_progress" (reset)
+     - ITERATE back to al-developer → Go to step 2
+   - **If only Medium/Low issues:**
+     - TaskUpdate: "Code Review" → status: "completed", metadata: {passed: true}
+     - Continue to step 7
 
 ### Compilation Loop (Iterative)
-4. **Spawn diagnostics-fixer** - Fix auto-fixable issues
-5. **Evaluate compilation:**
-   - **If complex errors (3+ or logic issues):** ITERATE back to al-developer → Go to step 2
-   - **If minor/no errors:** Done
+7. **TaskUpdate:** "Diagnostics" → status: "in_progress"
+8. **Spawn diagnostics-fixer** - Fix auto-fixable issues
+9. **Evaluate compilation:**
+   - **If complex errors (3+ or logic issues):**
+     - TaskUpdate: "Diagnostics" → status: "completed", metadata: {clean: false}
+     - ITERATE back to al-developer → Go to step 1
+   - **If minor/no errors:**
+     - TaskUpdate: "Diagnostics" → status: "completed", metadata: {clean: true}
+     - Done
 
 ## Iteration Logic
 

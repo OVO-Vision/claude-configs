@@ -1,6 +1,6 @@
 ---
 description: Run testing phase only (create tests → review tests)
-allowed-tools: ["Task"]
+allowed-tools: ["Task", "TaskCreate", "TaskUpdate", "TaskList"]
 ---
 
 # Testing Phase
@@ -15,11 +15,40 @@ Run only the testing phase: test creation and test review.
 
 **Prerequisite:** Must have implemented code and `.dev/02-solution-plan.md`.
 
+## Step 0: Check/Create Tasks
+
+**Check for existing tasks:**
+
+```
+TaskList → Check if Testing task exists
+  - If exists → Continue
+  - If not exists → Create testing tasks
+```
+
+**Create testing tasks if needed:**
+
+```
+TaskCreate: "Testing"
+  - description: "Create test codeunits"
+  - activeForm: "Writing tests"
+
+TaskCreate: "Test Review"
+  - description: "Review test coverage and quality"
+  - activeForm: "Reviewing tests"
+
+TaskUpdate: "Test Review" → addBlockedBy: ["Testing"]
+```
+
 ## What It Does
 
-Runs testing agents in sequence:
-1. **test-engineer** - Create comprehensive tests
-2. **test-reviewer** - Review test coverage
+Runs testing agents in sequence with task tracking:
+
+1. **TaskUpdate:** "Testing" → status: "in_progress"
+2. **Spawn test-engineer** - Create comprehensive tests
+3. **TaskUpdate:** "Testing" → status: "completed"
+4. **TaskUpdate:** "Test Review" → status: "in_progress"
+5. **Spawn test-reviewer** - Review test coverage
+6. **TaskUpdate:** "Test Review" → status: "completed"
 
 ## Output
 
