@@ -105,16 +105,24 @@ At each TDD phase gate, you MUST use AskUserQuestion to block:
 
 **After RED phase (test written):**
 ```
+# Agent compiles, publishes, and runs the test
+Bash: al-compile
+Bash: bc-publish
+Bash: bc-test -o .dev/test-results-red.txt
+# Note: Auto-detects test codeunit range from app.json
+# Or specify explicitly: bc-test 50200 -o .dev/test-results-red.txt
+
+# Agent verifies test FAILED, then asks user to review
 AskUserQuestion:
-  question: "RED Phase Complete. Please deploy to BC and run test [TestName]. Did it FAIL as expected?"
+  question: "RED Phase Complete. Test executed and FAILED as expected. Detailed results in .dev/test-results-red.txt. Please review the test failure to confirm it's correct."
   header: "TDD RED"
   options:
-    - label: "Yes - Test FAILED"
+    - label: "Approve - Test FAILED correctly"
       description: "Test failed as expected. Ready to implement production code (GREEN phase)."
-    - label: "No - Test PASSED"
-      description: "⚠️ Test passed unexpectedly! This means the test is wrong or production code already exists."
-    - label: "Deployment issue"
-      description: "Could not deploy or run the test. Need troubleshooting."
+    - label: "Test PASSED unexpectedly"
+      description: "⚠️ TDD VIOLATION! Test passed when it should fail. Test is wrong or production code exists."
+    - label: "Need troubleshooting"
+      description: "Unexpected error or compilation issue. Need investigation."
 ```
 
 **If user selects "Test PASSED" in RED phase:**
@@ -125,28 +133,49 @@ AskUserQuestion:
 
 **After GREEN phase (production code written):**
 ```
+# Agent compiles, publishes, and runs the test
+Bash: al-compile
+Bash: bc-publish
+Bash: bc-test -o .dev/test-results-green.txt
+# Note: Auto-detects test codeunit range from app.json
+# Or specify explicitly: bc-test 50200 -o .dev/test-results-green.txt
+
+# Agent verifies test PASSED, then asks user to review
 AskUserQuestion:
-  question: "GREEN Phase Complete. Please deploy and run test [TestName]. Did it PASS?"
+  question: "GREEN Phase Complete. Test executed and PASSED. Detailed results in .dev/test-results-green.txt. Please review the test success to confirm implementation is correct."
   header: "TDD GREEN"
   options:
-    - label: "Yes - Test PASSED"
+    - label: "Approve - Test PASSED"
       description: "Test passes. Ready to refactor (or move to next test)."
-    - label: "No - Test still FAILS"
+    - label: "Test still FAILS"
       description: "Test still fails. Need to fix implementation."
-    - label: "Deployment issue"
-      description: "Could not deploy or run the test."
+    - label: "Need troubleshooting"
+      description: "Unexpected error or implementation issue."
 ```
 
 **After REFACTOR phase:**
 ```
+# Agent compiles, publishes, and runs ALL tests
+Bash: al-compile
+Bash: bc-publish
+Bash: bc-test -o .dev/test-results-refactor.txt
+# Note: Auto-detects full test codeunit range from app.json
+
+# Alternative: Specify multiple codeunits or ranges explicitly
+# bc-test 50200 50201 -o .dev/test-results-refactor.txt
+# bc-test 50200-50210 -o .dev/test-results-refactor.txt
+
+# Agent verifies all tests PASSED, then asks user to review
 AskUserQuestion:
-  question: "REFACTOR Complete. Please run ALL tests. Do they all PASS?"
+  question: "REFACTOR Complete. All tests executed and PASSED. Detailed results in .dev/test-results-refactor.txt. Please review to confirm refactoring didn't break anything."
   header: "TDD REFACTOR"
   options:
-    - label: "Yes - All tests PASS"
+    - label: "Approve - All tests PASS"
       description: "All tests pass. Ready for next test specification."
-    - label: "No - Some tests FAIL"
+    - label: "Some tests FAILED"
       description: "Refactoring broke something. Will revert."
+    - label: "Need troubleshooting"
+      description: "Unexpected error or refactoring issue."
 ```
 
 ### The Three Hard Stops
@@ -220,15 +249,21 @@ TaskCreate: "TDD REFACTOR: Validate credit limit within limit"
 2. **RED Phase:**
    - Write failing test + mock implementations
    - Add MINIMAL production stubs (compilation only - NO logic)
-   - ⛔ **STOP** → AskUserQuestion → User confirms test FAILS
+   - Compile, publish, and run test (`bc-test`)
+   - Verify test FAILS
+   - ⛔ **STOP** → AskUserQuestion → User reviews and approves RED phase
 3. **GREEN Phase:**
    - Implement ACTUAL production logic
    - Implement real repositories/services
-   - ⛔ **STOP** → AskUserQuestion → User confirms test PASSES
+   - Compile, publish, and run test (`bc-test`)
+   - Verify test PASSES
+   - ⛔ **STOP** → AskUserQuestion → User reviews and approves GREEN phase
 4. **REFACTOR Phase:**
    - Extract helpers, add docs, optimize
    - No behavior changes
-   - ⛔ **STOP** → AskUserQuestion → User confirms ALL tests PASS
+   - Compile, publish, and run ALL tests (`bc-test`)
+   - Verify ALL tests PASS
+   - ⛔ **STOP** → AskUserQuestion → User reviews and approves REFACTOR phase
 5. **Document cycle** in `.dev/03-tdd-log.md`
 6. **Repeat** for next test
 

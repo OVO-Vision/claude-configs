@@ -77,19 +77,44 @@ Create a test that fails because the production code doesn't exist yet.
    }
    ```
 
-5. **⛔ HARD STOP - Use AskUserQuestion:**
+5. **Compile and publish app:**
+   ```bash
+   # Compile the app
+   al-compile
+
+   # Publish to BC server
+   bc-publish
+   ```
+
+6. **Run the test:**
+   ```bash
+   # Execute the test codeunit
+   # Auto-detects codeunit range from app.json if available
+   bc-test -o .dev/test-results-red.txt
+
+   # Or specify codeunit ID explicitly
+   bc-test 50200 -o .dev/test-results-red.txt
+
+   # Note: Results are written to file for clean conversation
+   # Console shows summary only (e.g., "Passed: 0, Failed: 1")
+   ```
+
+7. **⛔ HARD STOP - Use AskUserQuestion:**
    ```markdown
    RED Phase Complete: [TestName]
 
-   Please deploy to BC and run the test. Did it FAIL as expected?
+   Test Results: Written to .dev/test-results-red.txt
+   [Show summary from bc-test stdout - passed/failed counts]
+
+   Did the test FAIL as expected?
 
    Options:
    - Yes - Test FAILED → Continue to GREEN phase
    - No - Test PASSED → ⚠️ TDD VIOLATION! Test is wrong or code exists
-   - Deployment issue → Need troubleshooting
+   - Compilation/deployment issue → Need troubleshooting
    ```
 
-6. **Wait for user response** - DO NOT proceed to GREEN until user confirms FAIL
+8. **Wait for user response** - DO NOT proceed to GREEN until user confirms FAIL
 
 ### RED Phase Violations
 
@@ -146,19 +171,44 @@ Write minimal production code to make the test pass.
    ```
 
 2. **Implement real interface implementations** (repositories, services)
-3. **⛔ HARD STOP - Use AskUserQuestion:**
+3. **Compile and publish app:**
+   ```bash
+   # Compile the app
+   al-compile
+
+   # Publish to BC server
+   bc-publish
+   ```
+
+4. **Run the test:**
+   ```bash
+   # Execute the test codeunit
+   # Auto-detects codeunit range from app.json if available
+   bc-test -o .dev/test-results-green.txt
+
+   # Or specify codeunit ID explicitly
+   bc-test 50200 -o .dev/test-results-green.txt
+
+   # Note: Results are written to file for clean conversation
+   # Console shows summary only (e.g., "Passed: 1, Failed: 0")
+   ```
+
+5. **⛔ HARD STOP - Use AskUserQuestion:**
    ```markdown
    GREEN Phase Complete: [TestName]
 
-   Please deploy to BC and run the test. Did it PASS?
+   Test Results: Written to .dev/test-results-green.txt
+   [Show summary from bc-test stdout - passed/failed counts]
+
+   Did the test PASS?
 
    Options:
    - Yes - Test PASSED → Continue to REFACTOR
    - No - Test still FAILS → Fix implementation
-   - Deployment issue → Need troubleshooting
+   - Compilation/deployment issue → Need troubleshooting
    ```
 
-4. **Wait for user response** - DO NOT proceed to REFACTOR until user confirms PASS
+6. **Wait for user response** - DO NOT proceed to REFACTOR until user confirms PASS
 
 ### GREEN Phase Iterations
 
@@ -217,19 +267,47 @@ Improve code quality without changing behavior.
    local procedure IsWithinCreditLimit(...): Boolean
    ```
 
-2. **⛔ HARD STOP - Use AskUserQuestion:**
+2. **Compile and publish app:**
+   ```bash
+   # Compile the app
+   al-compile
+
+   # Publish to BC server
+   bc-publish
+   ```
+
+3. **Run ALL tests:**
+   ```bash
+   # Execute all test codeunits to verify refactoring didn't break anything
+   # Auto-detects full codeunit range from app.json
+   bc-test -o .dev/test-results-refactor.txt
+
+   # Or specify multiple codeunits explicitly
+   bc-test 50200 50201 -o .dev/test-results-refactor.txt
+
+   # Or use ranges for consecutive codeunit IDs
+   bc-test 50200-50210 -o .dev/test-results-refactor.txt
+
+   # Note: Results written to file for detailed review
+   # Console shows summary (e.g., "Passed: 10, Failed: 0")
+   ```
+
+4. **⛔ HARD STOP - Use AskUserQuestion:**
    ```markdown
    REFACTOR Phase Complete
 
-   Please run ALL tests. Do they all PASS?
+   Test Results: Written to .dev/test-results-refactor.txt
+   [Show summary from bc-test stdout - passed/failed counts]
+
+   All tests still PASS after refactoring. Please review results.
 
    Options:
-   - Yes - All tests PASS → Continue to next test
-   - No - Some tests FAIL → Revert refactoring
-   - Deployment issue → Need troubleshooting
+   - Approve → Continue to next test
+   - Some tests FAILED → Revert refactoring
+   - Need troubleshooting → Investigate failures
    ```
 
-3. **Wait for user response** - DO NOT continue until user confirms all tests PASS
+5. **Wait for user response** - DO NOT continue until user confirms all tests PASS
 
 ### REFACTOR Phase Failures
 
@@ -302,26 +380,184 @@ TaskUpdate: "TDD REFACTOR: [test]" → addBlockedBy: ["TDD GREEN: [test]"]
 
 ## Test Execution Context
 
-**AL tests cannot be executed automatically by Claude Code:**
-- BC requires server deployment to run tests
-- User must manually deploy and run tests at each phase
-- Each TDD cycle includes manual approval gates
-- User reports PASS/FAIL back to agent
+**AL tests can be executed automatically using bc-publish and bc-test:**
+- Agents use `bc-publish` to deploy .app files to BC server
+- Agents use `bc-test [codeunit-id]` to execute test codeunits
+- Requires `.bcconfig.json` with server configuration
+- Each TDD cycle includes automated test execution with approval gates
+- Agent presents test results to user for verification
 
-**This ensures TDD discipline is followed** - the agent cannot skip verification gates.
+**This ensures TDD discipline is followed** - test results are verified at each gate.
 
 ---
+
+## Advanced bc-test Features
+
+### Auto-Detection from app.json
+
+**bc-test can automatically detect the test codeunit range:**
+
+```bash
+# No codeunit IDs needed - auto-detects from app.json
+bc-test
+
+# Reads first idRange from app.json in current directory
+# Example: {"from": 83200, "to": 83299} → runs 83200-83299
+```
+
+**Benefits:**
+- No need to remember codeunit IDs
+- Works across projects automatically
+- Updates when app.json changes
+
+### File Output Options
+
+**Write detailed results to file instead of flooding console:**
+
+```bash
+# Text format (human-readable with full call stacks)
+bc-test -o .dev/test-results.txt
+
+# JSON format (machine-readable for CI/CD)
+bc-test -o .dev/test-results.json -f json
+
+# Console shows summary only:
+# "Passed: 558, Failed: 9"
+```
+
+**JSON Structure:**
+```json
+{
+  "total_tests_run": 567,
+  "passed": 558,
+  "failed": 9,
+  "showing": "all",
+  "tests": [
+    {
+      "codeunitId": 83220,
+      "codeunitName": "Credit Limit Tests",
+      "functionName": "Test_ValidateCreditLimit_WithinLimit",
+      "success": true,
+      "errorMessage": "",
+      "callStack": ""
+    }
+  ]
+}
+```
+
+### Failures-Only Filter
+
+**Focus on what needs attention:**
+
+```bash
+# Show only failed tests (console output)
+bc-test --failures-only
+
+# Save only failures to file
+bc-test -o .dev/failures.txt --failures-only
+
+# Example: 567 tests → 9 failures shown
+# Header: "9 failures (out of 567 total)"
+```
+
+**Use cases:**
+- Quick identification of problems
+- Reduced noise in large test suites
+- CI/CD failure reports
+
+### Smart Defaults
+
+**bc-test adapts to your workflow:**
+
+**Console output (no `-o`):**
+- Defaults to `--failures-only` (less noise)
+- Shows summary statistics always
+- Override: `bc-test --no-failures-only` to see all
+
+**File output (with `-o`):**
+- Defaults to show all tests (complete record)
+- Includes full details and call stacks
+- Override: `bc-test -o file.txt --failures-only` for failures only
+
+### CI/CD Integration
+
+**Use JSON format for automated pipelines:**
+
+```bash
+# Export test results for CI/CD
+bc-test -o test-results.json -f json
+
+# Parse with jq for failed tests
+jq '.tests[] | select(.success == false)' test-results.json
+
+# Check if any tests failed
+if jq -e '.failed > 0' test-results.json; then
+  echo "Tests failed!"
+  exit 1
+fi
+```
+
+### Example Workflows
+
+**Quick check during development:**
+```bash
+# See only what's broken
+bc-test
+# Output: "9 failures (out of 567 total)" + failure details
+```
+
+**Comprehensive documentation:**
+```bash
+# Save complete test run for records
+bc-test -o .dev/test-run-$(date +%Y%m%d).txt
+# File contains all tests with full details
+```
+
+**Automated testing:**
+```bash
+# CI/CD pipeline
+bc-test -o results.json -f json --failures-only
+# Upload results.json as artifact
+```
+
+---
+
+## BC Configuration Requirements
+
+**Agents require `.bcconfig.json` to run tests:**
+
+```json
+{
+  "server": "http://localhost",
+  "port": 7048,
+  "instance": "BC",
+  "tenant": "default",
+  "username": "admin",
+  "password": "Admin123!",
+  "apiInstance": "BC",
+  "apiPassword": "your-web-service-key",
+  "schemaUpdateMode": "synchronize"
+}
+```
+
+- Create `.bcconfig.json` in project root or home directory
+- Use `bc-publish --init` to create template
+- `apiPassword` should be web service access key (for bc-test OData access)
+- `password` is for dev endpoint publishing
 
 ## Summary: The Hard Stops
 
 ```
 1. Write test code + minimal stubs
-2. ⛔ STOP → User deploys, runs test, confirms FAIL
-3. Write production code
-4. ⛔ STOP → User deploys, runs test, confirms PASS
-5. Refactor code
-6. ⛔ STOP → User runs ALL tests, confirms ALL PASS
-7. Move to next test →
+2. Compile, publish, run test (agent verifies FAIL)
+3. ⛔ STOP → Agent shows results, user reviews and confirms
+4. Write production code
+5. Compile, publish, run test (agent verifies PASS)
+6. ⛔ STOP → Agent shows results, user reviews and confirms
+7. Refactor code
+8. Compile, publish, run ALL tests (agent verifies all PASS)
+9. ⛔ STOP → Agent shows results, user reviews and confirms
+10. Move to next test →
 ```
 
 **Three hard stops per test. No exceptions.**

@@ -1,7 +1,7 @@
 {
   "name": "profile-al-development",
   "description": "Full-lifecycle AL development for Business Central with Test-Driven Development (TDD) workflow. Testable architecture from day 1 with dependency injection and interfaces. Document-driven workflow with 12 specialized agents, test specifications before code, RED-GREEN-REFACTOR cycles, iterative quality loops, approval gates, MCP integration (BC Intelligence, MS Docs, AL Dependency). Supports TDD, estimation, planning, development, testing, and expert consultation.",
-  "version": "2.19.0",
+  "version": "2.21.0",
   "author": {
     "name": "Stefan"
   },

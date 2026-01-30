@@ -1,6 +1,6 @@
 ---
-description: Run/analyze existing tests or validate test coverage (v2.18 TDD workflow)
-allowed-tools: ["Task", "TaskCreate", "TaskUpdate", "TaskList", "Read"]
+description: Run/analyze existing tests or validate test coverage (v2.18+ with bc-test support)
+allowed-tools: ["Task", "TaskCreate", "TaskUpdate", "TaskList", "Read", "Bash"]
 ---
 
 # Testing Phase
@@ -98,14 +98,32 @@ TaskCreate: "Test Validation"
 1. **TaskUpdate:** "Test Validation" → status: "in_progress"
 2. **Read test specification:** `.dev/05-test-specification.md`
 3. **Find test codeunits:** Glob for test files
-4. **Spawn test-reviewer** with instructions:
+4. **(Optional) Execute tests:**
+   ```bash
+   al-compile
+   bc-publish
+   bc-test -o .dev/test-execution-results.txt
+   # Note: Auto-detects test codeunit range from app.json
+
+   # Alternative: Specify explicitly
+   # bc-test 50200 50201 -o .dev/test-execution-results.txt
+   # bc-test 50200-50210 -o .dev/test-execution-results.txt
+
+   # Focus on failures only
+   # bc-test --failures-only
+
+   # Export as JSON for CI/CD
+   # bc-test -o results.json -f json
+   ```
+5. **Spawn test-reviewer** with instructions:
    - Read test specification
    - Read implemented tests
+   - Optionally run tests to verify they pass
    - Verify all specs were implemented
    - Check test quality
    - Report coverage percentage
-5. **TaskUpdate:** "Test Validation" → status: "completed"
-6. **Show summary** of `.dev/06-test-review.md`
+6. **TaskUpdate:** "Test Validation" → status: "completed"
+7. **Show summary** of `.dev/06-test-review.md`
 
 ### Scenario B: No Specification (Quality Review Only)
 

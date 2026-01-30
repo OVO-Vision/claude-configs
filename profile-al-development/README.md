@@ -1,6 +1,6 @@
 # AL Development Profile - Full Lifecycle
 
-**Version:** 2.15.0
+**Version:** 2.21.0
 
 Claude Code profile for Microsoft Dynamics 365 Business Central AL development with intelligent complexity routing and proportional planning.
 
@@ -132,6 +132,81 @@ All results in `.dev/` directory.
 - `.dev/nav-[topic].md`
 
 **Note:** solution-planner uses BC Intelligence, MS Docs, and AL Dependency MCP tools internally.
+
+## Automated Test Execution (v2.20+)
+
+Agents can now automatically compile, publish, and execute tests during TDD workflow:
+
+### Requirements
+
+1. **bc-publish** - Publishes .app files to BC server
+2. **bc-test** - Executes test codeunits via OData API
+3. **.bcconfig.json** - BC server configuration
+
+### Setup
+
+Install bc-publish and bc-test utilities (or ensure they're in PATH):
+
+```bash
+# Create .bcconfig.json in your project root
+bc-publish --init
+```
+
+Edit `.bcconfig.json`:
+
+```json
+{
+  "server": "http://localhost",
+  "port": 7048,
+  "instance": "BC",
+  "tenant": "default",
+  "username": "admin",
+  "password": "Admin123!",
+  "apiInstance": "BC",
+  "apiPassword": "your-web-service-access-key",
+  "schemaUpdateMode": "synchronize"
+}
+```
+
+### TDD Workflow with Automated Testing
+
+When using TDD workflow (`/develop` with test specifications):
+
+1. **RED Phase**: Agent writes failing test, compiles, publishes, runs → verifies FAIL → asks user to approve
+2. **GREEN Phase**: Agent implements code, compiles, publishes, runs → verifies PASS → asks user to approve
+3. **REFACTOR Phase**: Agent refactors, compiles, publishes, runs all tests → verifies all PASS → asks user to approve
+
+This automation maintains TDD discipline while eliminating manual deployment steps.
+
+### Advanced bc-test Features
+
+**Auto-Detection:**
+- bc-test automatically detects test codeunit range from app.json
+- No need to specify codeunit IDs manually
+
+**File Output:**
+- `-o file.txt`: Write detailed results to file (human-readable)
+- `-o file.json -f json`: Export as JSON for CI/CD integration
+- Console shows summary only for clean conversation
+
+**Failures-Only Filter:**
+- `--failures-only`: Focus on failed tests only
+- Smart default: Console output shows failures-only by default
+
+**Examples:**
+```bash
+# Auto-detect range, show failures only (default)
+bc-test
+
+# Save all results to file
+bc-test -o .dev/test-results.txt
+
+# Export as JSON for CI/CD
+bc-test -o results.json -f json
+
+# Focus on failures
+bc-test --failures-only
+```
 
 ## MCP Server Configuration
 

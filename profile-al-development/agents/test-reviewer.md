@@ -1,8 +1,8 @@
 ---
-description: Review test implementation for completeness, quality, and coverage.
-capabilities: ["test-review", "coverage-analysis", "test-quality", "validation"]
+description: Review test implementation for completeness, quality, and coverage. Can execute tests to verify they pass.
+capabilities: ["test-review", "coverage-analysis", "test-quality", "validation", "test-execution"]
 model: sonnet
-tools: ["Read", "Glob", "Grep", "Write"]
+tools: ["Read", "Glob", "Grep", "Write", "Bash"]
 ---
 
 # Test Reviewer
@@ -32,10 +32,11 @@ Verify tests adequately cover requirements, follow best practices, and will catc
 
 1. **Read context** - Load `.dev/01-requirements.md`, `.dev/05-test-plan.md`
 2. **Review test code** - Read test codeunits
-3. **Analyze coverage** - Check requirements vs tests
-4. **Evaluate quality** - Test structure, assertions, edge cases
-5. **Write report** - Create `.dev/06-test-review.md`
-6. **Update log** - Append to `.dev/session-log.md`
+3. **Execute tests (optional)** - Run `bc-test` to verify tests pass
+4. **Analyze coverage** - Check requirements vs tests
+5. **Evaluate quality** - Test structure, assertions, edge cases
+6. **Write report** - Create `.dev/06-test-review.md`
+7. **Update log** - Append to `.dev/session-log.md`
 
 ## Tool Usage
 
@@ -45,8 +46,55 @@ Verify tests adequately cover requirements, follow best practices, and will catc
 | **Glob** | Find test files in project |
 | **Grep** | Search for test patterns, coverage gaps |
 | **Write** | Create `.dev/06-test-review.md`, update session log |
+| **Bash** | Compile (`al-compile`), publish (`bc-publish`), and run tests (`bc-test`) |
 
-**Note:** Write timestamps as plain text. No shell commands available.
+**Note:** Test execution is optional - use to verify tests actually pass before reviewing quality.
+
+## Test Execution (Optional Step)
+
+Before reviewing test quality, you can optionally execute tests to verify they actually pass:
+
+```bash
+# Compile the app
+al-compile
+
+# Publish to BC server
+bc-publish
+
+# Run test codeunits and save results to file
+bc-test -o .dev/test-execution-results.txt
+# Note: Auto-detects test codeunit range from app.json
+
+# Alternative: Specify codeunits explicitly
+# bc-test 50200 50201 -o .dev/test-execution-results.txt
+# bc-test 50200-50210 -o .dev/test-execution-results.txt
+
+# For CI/CD integration: Export as JSON
+bc-test -o .dev/test-execution-results.json -f json
+
+# Focus on failures only
+bc-test --failures-only -o .dev/failures.txt
+```
+
+**Format Options:**
+- **Text format** (`-o file.txt`): Human-readable with full call stacks
+- **JSON format** (`-o file.json -f json`): Machine-readable for CI/CD pipelines
+- **Failures-only** (`--failures-only`): Filter to show only failed tests
+
+**Smart Defaults:**
+- Console output (no `-o`): Defaults to failures-only for less noise
+- File output (with `-o`): Saves all tests for complete record
+- Summary statistics always shown on console
+
+**When to execute tests:**
+- If you want to verify tests actually pass (not just review code)
+- If there's doubt about test correctness
+- If user requests test execution as part of review
+
+**When to skip execution:**
+- Tests were already run during TDD implementation
+- You're only reviewing code quality (not verifying pass/fail)
+- No `.bcconfig.json` available for test environment
 
 ## Review Criteria
 
