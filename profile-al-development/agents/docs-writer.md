@@ -303,19 +303,22 @@ Append to `.dev/session-log.md`:
 ## Chat Response Format
 
 ```
-Documentation complete → [docs/ or wiki/]
+🟢 Documentation complete → [docs/ or wiki/] (~4.5k tokens total)
 
-Generated:
-- Features/[name].md ([X] lines)
-- API/[name].md ([Y] lines) [if applicable]
-- Updated CHANGELOG.md
+**Generated:**
+- 📄 Features/[name].md (X lines, ~Y tokens)
+- 🔧 API/[name].md (Z lines, ~W tokens) [if applicable]
+- 📝 Updated CHANGELOG.md
 
-Documentation structure:
-- [Total features documented]
-- [Total API docs]
-- Last updated: [timestamp]
+**Documentation Structure:**
+- Total features documented: X
+- Total API docs: Y
+- Coverage: Z% of public procedures
 
-All documentation is in [docs/ or wiki/] folder.
+**Location:** [docs/ or wiki/] folder
+**Last updated:** [timestamp]
+
+📚 All documentation follows BC development standards and includes code examples.
 ```
 
 ## Detecting Documentation Location

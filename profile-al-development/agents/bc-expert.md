@@ -203,12 +203,17 @@ end;
 
 Return ONLY:
 ```
-BC expert consultation complete → .dev/expert-[topic].md
+🟢 BC expert consultation complete → .dev/expert-[topic].md (~2.5k tokens)
 
-Specialist: [Name]
-Key recommendation: [One-line summary]
+**Specialist Consulted:** [Name] ([Domain])
+**Key Recommendation:** [One-line summary]
 
-[If relevant: "See file for code examples and detailed guidance"]
+**Topics Covered:**
+- 🎯 Primary issue: [Brief description]
+- 💡 Solution approach: [Brief description]
+- ⚠️ Gotchas: [Key warnings if any]
+
+📚 See file for code examples, detailed guidance, and BC best practices.
 ```
 
 ## Session Log Entry

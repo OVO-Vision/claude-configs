@@ -21,440 +21,210 @@ Orchestrates all development phases with **mandatory approval gates** between ma
 
 **Smart Resume:** If tasks exist from previous session, resume from where you left off.
 
-## Step 0: Create Task Structure
+## ⚠️ CRITICAL: How This Command Works
 
-**At workflow start, create tasks with dependencies:**
+**You are the ORCHESTRATOR. Agents are the WORKERS.**
 
-```
-TaskCreate: "Requirements Analysis"
-  - description: "Extract requirements for: [user request]"
-  - activeForm: "Analyzing requirements"
+Your job:
+1. Create tasks (for tracking progress)
+2. **SPAWN AGENTS** to do the actual work
+3. Update task status as agents complete work
+4. Show summaries and get user approval
 
-TaskCreate: "Solution Planning"
-  - description: "Design architecture and implementation plan"
-  - activeForm: "Designing solution"
+**DO NOT:**
+- Implement code yourself
+- Write requirements yourself
+- Do any of the actual work
 
-TaskCreate: "Development"
-  - description: "Implement AL code per solution plan"
-  - activeForm: "Implementing code"
+**DO:**
+- Spawn specialized agents for each phase
+- Update tasks before/after each agent
+- Present results and ask for approval
 
-TaskCreate: "Code Review"
-  - description: "Review code for quality and standards"
-  - activeForm: "Reviewing code"
+## Step 0: Create Tasks
 
-TaskCreate: "Diagnostics"
-  - description: "Fix compilation issues"
-  - activeForm: "Fixing diagnostics"
+Extract feature name from request (e.g., "Add credit limit validation" → "credit limit validation").
 
-TaskCreate: "Testing"
-  - description: "Create test codeunits"
-  - activeForm: "Writing tests"
-
-TaskCreate: "Test Review"
-  - description: "Review test coverage and quality"
-  - activeForm: "Reviewing tests"
-
-TaskCreate: "Documentation"
-  - description: "Generate feature and API documentation"
-  - activeForm: "Writing documentation"
-```
-
-**Then set up dependencies:**
-```
-TaskUpdate: "Solution Planning" → addBlockedBy: ["Requirements Analysis"]
-TaskUpdate: "Development" → addBlockedBy: ["Solution Planning"]
-TaskUpdate: "Code Review" → addBlockedBy: ["Development"]
-TaskUpdate: "Diagnostics" → addBlockedBy: ["Code Review"]
-TaskUpdate: "Testing" → addBlockedBy: ["Diagnostics"]
-TaskUpdate: "Test Review" → addBlockedBy: ["Testing"]
-TaskUpdate: "Documentation" → addBlockedBy: ["Test Review"]
-```
-
-## Checking for Existing Tasks/Docs
-
-**Before creating tasks, check if resuming:**
+Create feature-specific tasks:
 
 ```
-TaskList → Check for existing tasks for this feature
-  - If tasks exist with some completed → Resume from first pending task
-  - If no tasks → Create fresh task structure (Step 0)
+TaskCreate: "Analyze requirements for [feature]"
+TaskCreate: "Design architecture for [feature]"
+TaskCreate: "Review solution plan for [feature]"
+TaskCreate: "Verify plan assumptions for [feature]"
+TaskCreate: "Check test infrastructure"
+TaskCreate: "Design test specification for [feature]"
+TaskCreate: "TDD implementation for [feature]" (parent - al-developer creates child tasks)
+TaskCreate: "Review code for [feature]"
+TaskCreate: "Fix compilation issues for [feature]"
+TaskCreate: "Validate test coverage for [feature]"
+TaskCreate: "Generate documentation for [feature]"
 
-Also check:
-ls .dev/01-requirements.md .dev/02-solution-plan.md
-  - If planning docs exist → Ask: Resume or start fresh?
+# Set dependencies
+TaskUpdate: "Design architecture for [feature]" → addBlockedBy: ["Analyze requirements for [feature]"]
+TaskUpdate: "Review solution plan for [feature]" → addBlockedBy: ["Design architecture for [feature]"]
+TaskUpdate: "Verify plan assumptions for [feature]" → addBlockedBy: ["Review solution plan for [feature]"]
+TaskUpdate: "Check test infrastructure" → addBlockedBy: ["Verify plan assumptions for [feature]"]
+TaskUpdate: "Design test specification for [feature]" → addBlockedBy: ["Check test infrastructure"]
+TaskUpdate: "TDD implementation for [feature]" → addBlockedBy: ["Design test specification for [feature]"]
+TaskUpdate: "Review code for [feature]" → addBlockedBy: ["TDD implementation for [feature]"]
+TaskUpdate: "Fix compilation issues for [feature]" → addBlockedBy: ["Review code for [feature]"]
+TaskUpdate: "Validate test coverage for [feature]" → addBlockedBy: ["Fix compilation issues for [feature]"]
+TaskUpdate: "Generate documentation for [feature]" → addBlockedBy: ["Validate test coverage for [feature]"]
 ```
 
-## First: Check for Existing Planning
+**Note:** al-developer creates child tasks (`"TDD RED: [test]"`, `"TDD GREEN: [test]"`, `"TDD REFACTOR: [test]"`) dynamically during TDD cycles.
 
-**Before starting, check if planning docs exist:**
+## Check for Existing Work
 
 ```bash
-# Check for existing planning documents
+# Check tasks and planning docs
+TaskList
 ls .dev/01-requirements.md .dev/02-solution-plan.md
 ```
 
-### If Planning Docs Exist (from previous /plan)
-
-**Skip to Phase 3: Development**
-- Show summary: "Found existing plan, continuing from development phase"
-- Show brief summary of existing 02-solution-plan.md
-- Ask: "Use existing plan or start fresh?"
-  - Use existing → Jump to Phase 3
-  - Start fresh → Continue with Phase 1
-
-### If No Planning Docs
-
-**Start from Phase 1**
+**If planning docs exist:** Ask user: "Use existing plan (→ Phase 3) or start fresh?"
+**If tasks exist:** Resume from first pending task
+**Otherwise:** Create fresh tasks (Step 0) and start from Phase 1
 
 ## Workflow with Approval Gates
 
 ### Phase 1: Requirements Analysis
 
-1. **TaskUpdate:** "Requirements Analysis" → status: "in_progress"
-2. **Spawn requirements-engineer** with user's request
-3. **TaskUpdate:** "Requirements Analysis" → status: "completed"
-4. **Show `.dev/01-requirements.md` summary**
-5. **🛑 APPROVAL GATE:** Ask user:
-   - ✅ Approve and continue to solution planning
-   - 🔄 Refine requirements (provide feedback, re-run agent)
-   - ❌ Stop here
+1. TaskUpdate: "Analyze requirements for [feature]" → in_progress
+2. **→ SPAWN requirements-engineer** with user's request
+3. TaskUpdate: "Analyze requirements for [feature]" → completed
+4. Read and show `.dev/01-requirements.md` summary (3-5 bullets)
+5. **🛑 APPROVAL GATE:** Use AskUserQuestion:
+   - ✅ Approve → Continue to Phase 2
+   - 🔄 Refine → Re-spawn agent with feedback
+   - ❌ Stop
 
 ### Phase 2: Solution Planning
 
-6. **TaskUpdate:** "Solution Planning" → status: "in_progress"
-7. **Spawn solution-planner** (reads requirements, uses MCP tools)
-8. **TaskUpdate:** "Solution Planning" → status: "completed"
-9. **Show `.dev/02-solution-plan.md` summary**
-10. **🛑 APPROVAL GATE:** Ask user:
-    - ✅ Approve and start implementation
-    - 🔄 Revise plan (provide feedback, re-run agent)
-    - ❌ Stop here
+6. TaskUpdate: "Design architecture for [feature]" → in_progress
+7. **→ SPAWN solution-planner** (reads requirements, uses MCP tools)
+8. TaskUpdate: "Design architecture for [feature]" → completed
+9. TaskUpdate: "Review solution plan for [feature]" → in_progress
+10. **→ SPAWN plan-reviewer** (adversarial review)
+11. **Evaluate** `.dev/02a-plan-review.md`:
+    - **CHANGES REQUIRED:** Loop back to solution-planner (max 3 cycles)
+    - **APPROVED:** Continue to step 12
+12. TaskUpdate: "Review solution plan for [feature]" → completed
+13. TaskUpdate: "Verify plan assumptions for [feature]" → in_progress
+14. **Verify [VERIFY]-tagged assumptions** using Glob/Grep/MCP
+    - If wrong: loop back to solution-planner with corrections
+15. TaskUpdate: "Verify plan assumptions for [feature]" → completed
+16. Read and show `.dev/02-solution-plan.md` summary (3-5 bullets)
+17. **🛑 APPROVAL GATE:** Use AskUserQuestion:
+    - ✅ Approve → Continue to Phase 2.5
+    - 🔄 Revise → Re-spawn agent with feedback
+    - ❌ Stop
 
-### Phase 3: Development (Iterative)
+### Phase 2.5: Test Specification
 
-**Initial Implementation:**
-11. **TaskUpdate:** "Development" → status: "in_progress"
-12. **Spawn al-developer** (reads solution plan)
-13. **TaskUpdate:** "Development" → status: "completed"
+18. TaskUpdate: "Check test infrastructure" → in_progress
+19. **Check test infrastructure:** grep for `"isTest": true` and test dependencies
+    - If missing: AskUserQuestion to set up, skip, or specify path
+20. TaskUpdate: "Check test infrastructure" → completed
+21. TaskUpdate: "Design test specification for [feature]" → in_progress
+22. **→ SPAWN test-engineer** (designs test specifications from plan)
+23. TaskUpdate: "Design test specification for [feature]" → completed
+24. Read and show `.dev/05-test-specification.md` summary (3-5 bullets)
+25. **🛑 APPROVAL GATE:** Use AskUserQuestion:
+    - ✅ Approve → Continue to Phase 3 (TDD)
+    - 🔄 Revise → Re-spawn agent with feedback
+    - ❌ Stop
+
+### Phase 3: TDD Development (Iterative)
+
+**TDD Implementation:**
+26. TaskUpdate: "TDD implementation for [feature]" → in_progress
+27. **→ SPAWN al-developer** - Follow TDD discipline from `tdd-workflow.md`:
+    - RED → GREEN → REFACTOR cycle for each test
+    - Create child tasks for each phase (TDD RED, TDD GREEN, TDD REFACTOR)
+    - Hard stops at each phase for user verification
+    - ⛔ NEVER implement logic before user confirms test FAILS
+    - ⛔ NEVER skip verification gates
+    - Document cycles in `.dev/03-tdd-log.md`
+
+    **See `tdd-workflow.md` for complete TDD standards.**
+
+28. TaskUpdate: "TDD implementation for [feature]" → completed
 
 **Code Review Loop:**
-14. **TaskUpdate:** "Code Review" → status: "in_progress"
-15. **Spawn code-reviewer** (reviews code)
-16. **Evaluate findings:**
-    - **If Critical/High issues:**
-      - TaskUpdate: "Code Review" → status: "completed", metadata: {passed: false}
-      - TaskUpdate: "Development" → status: "in_progress" (reset for fixes)
-      - ITERATE back to al-developer → Go to step 12
-    - **If only Medium/Low issues:**
-      - TaskUpdate: "Code Review" → status: "completed", metadata: {passed: true}
-      - Continue to step 17
+29. TaskUpdate: "Review code for [feature]" → in_progress
+30. **→ SPAWN code-reviewer** (reviews test + production code)
+31. **Evaluate** `.dev/03-code-review.md`:
+    - **CHANGES REQUIRED:** Create iteration task, loop back to al-developer (step 27)
+    - **Stall check:** After 2 iterations with no progress, escalate to user
+    - **APPROVED:** Continue to step 32
+32. TaskUpdate: "Review code for [feature]" → completed
 
 **Compilation Loop:**
-17. **TaskUpdate:** "Diagnostics" → status: "in_progress"
-18. **Spawn diagnostics-fixer** (fixes auto-fixable issues)
-19. **Evaluate compilation:**
-    - **If complex errors remain (3+ or logic issues):**
-      - TaskUpdate: "Diagnostics" → status: "completed", metadata: {clean: false}
-      - ITERATE back to al-developer → Go to step 11
-    - **If minor issues or clean:**
-      - TaskUpdate: "Diagnostics" → status: "completed", metadata: {clean: true}
-      - Continue to step 20
+33. TaskUpdate: "Fix compilation issues for [feature]" → in_progress
+34. **→ SPAWN diagnostics-fixer** (auto-fixes simple issues)
+35. **Evaluate compilation:**
+    - **Complex errors (3+ or logic issues):** Create iteration task, loop back to al-developer (step 27)
+    - **Stall check:** After 2 iterations with no progress, escalate to user
+    - **Minor/no errors:** Continue to step 36
+36. TaskUpdate: "Fix compilation issues for [feature]" → completed
 
-**Approval:**
-20. **Show `.dev/03-code-review.md` + `.dev/04-diagnostics.md` summary**
-21. **🛑 APPROVAL GATE:** Ask user:
-    - ✅ Approve and continue to testing
-    - 🔄 Manual adjustments needed (provide feedback)
-    - ❌ Stop here
+**Development Approval Gate:**
+37. Read and show summaries: `.dev/03-tdd-log.md`, `.dev/03-code-review.md`, `.dev/04-diagnostics.md`
+38. **🛑 APPROVAL GATE:** Use AskUserQuestion:
+    - ✅ Approve → Continue to Phase 4
+    - 🔄 Manual fixes → Provide feedback
+    - ❌ Stop
 
-### Phase 4: Testing (Automated)
+### Phase 4: Test Validation
 
-22. **TaskUpdate:** "Testing" → status: "in_progress"
-23. **Spawn test-engineer** (creates tests)
-24. **TaskUpdate:** "Testing" → status: "completed"
-25. **TaskUpdate:** "Test Review" → status: "in_progress"
-26. **Spawn test-reviewer** (reviews tests)
-27. **TaskUpdate:** "Test Review" → status: "completed"
-28. **Show `.dev/06-test-review.md` summary**
+39. TaskUpdate: "Validate test coverage for [feature]" → in_progress
+40. **→ SPAWN test-reviewer** (validates coverage matches test specification)
+41. TaskUpdate: "Validate test coverage for [feature]" → completed
+42. Read and show `.dev/06-test-review.md` summary
 
-### Phase 5: Documentation (Automated)
+### Phase 5: Documentation
 
-29. **TaskUpdate:** "Documentation" → status: "in_progress"
-30. **Spawn docs-writer** (generates documentation)
-31. **TaskUpdate:** "Documentation" → status: "completed"
-32. **Show documentation summary**
-33. **✅ Done!** All tasks completed.
+43. TaskUpdate: "Generate documentation for [feature]" → in_progress
+44. **→ SPAWN docs-writer** (generates feature/API docs)
+45. TaskUpdate: "Generate documentation for [feature]" → completed
+46. Show documentation summary
+47. **✅ Done!** All tasks completed.
 
 ## Critical Rules
 
-### ALWAYS Stop and Ask
+**ALWAYS stop and ask after each phase:**
+1. Read the output file
+2. Show summary (3-5 bullets)
+3. Use AskUserQuestion with options: Approve / Refine / Stop
+4. WAIT for user response
 
-After each major phase output:
-1. **Read the output file**
-2. **Summarize key points** (3-5 bullets)
-3. **Use AskUserQuestion** to get approval
-4. **Only proceed if approved**
+**NEVER auto-continue to next phase without approval.**
 
-### Never Auto-Continue
+If user selects "Refine": Re-spawn agent with feedback, then ask for approval again.
 
-❌ **DON'T:**
-```
-Spawning requirements-engineer...
-Spawning bc-solution-designer...  ← NO! Wait for approval!
-```
+## Output Files
 
-✅ **DO:**
-```
-Requirements analysis complete → .dev/01-requirements.md
-
-Key findings:
-- 5 functional requirements
-- 2 BC integration points
-- Credit limit validation on sales posting
-
-[Use AskUserQuestion: Approve / Refine / Stop]
-
-[Wait for user response before continuing]
-```
-
-## Approval Question Format
-
-Use AskUserQuestion with these options:
-
-```markdown
-{
-  "questions": [{
-    "question": "Review .dev/01-requirements.md. Ready to proceed to design phase?",
-    "header": "Next Step",
-    "multiSelect": false,
-    "options": [
-      {
-        "label": "Approve - Continue to design",
-        "description": "Requirements look good, proceed to BC solution design"
-      },
-      {
-        "label": "Refine - Need changes",
-        "description": "I'll provide feedback to improve the requirements"
-      },
-      {
-        "label": "Stop here",
-        "description": "End the workflow at this phase"
-      }
-    ]
-  }]
-}
-```
-
-## Handling User Feedback
-
-### If "Approve"
-- Continue to next phase
-
-### If "Refine"
-- Ask: "What changes do you need?"
-- Re-spawn same agent with user feedback
-- Show updated output
-- Ask for approval again
-
-### If "Stop"
-- End workflow
-- Summarize what was completed
-- User can resume later with individual commands
-
-## Output
-
-All phases write to `.dev/` directory:
-- `.dev/01-requirements.md`
-- `.dev/02-solution-plan.md`
-- `.dev/03-code-review.md`
-- `.dev/04-diagnostics.md`
-- `.dev/05-test-plan.md`
-- `.dev/06-test-review.md`
-- `.dev/session-log.md`
-
-## Expected Duration
-
-- **Requirements:** ~2 min agent + approval
-- **Solution planning:** ~4 min agent + approval (combines design + implementation planning)
-- **Development:** ~15-30 min (includes iteration loops if needed)
-  - al-developer: ~5-10 min
-  - code-reviewer: ~3-5 min
-  - If iteration needed: +5-10 min per loop
-  - diagnostics-fixer: ~2-5 min
-- **Testing:** ~10-15 min (all agents)
-
-**With approvals:** 35-65 minutes total (depending on iterations)
+Agents write to `.dev/` directory:
+- `.dev/01-requirements.md` - Requirements
+- `.dev/02-solution-plan.md` - Solution architecture
+- `.dev/02a-plan-review.md` - Plan review
+- `.dev/05-test-specification.md` - Test specs
+- `.dev/03-tdd-log.md` - TDD cycles
+- `.dev/03-code-review.md` - Code review
+- `.dev/04-diagnostics.md` - Compilation
+- `.dev/06-test-review.md` - Test validation
+- `.dev/session-log.md` - Activity log
 
 ## When to Use
 
-- Starting a new feature
-- Want to review each phase before proceeding
+- Starting a new feature with full lifecycle
+- Want approval gates between phases
 - Need complete documentation
-- Collaborative development
 
-## When NOT to Use
-
-- Quick bug fixes (too heavy)
-- You trust agents fully (use faster workflow)
-- Already have requirements/design (start at `/develop`)
-
-## Two Common Workflows
-
-### Workflow A: All-in-One
-```bash
-# Run everything in one go
-/dev-cycle "Add feature X"
-# Goes through all phases with approval gates
-```
-
-### Workflow B: Plan First, Implement Later (Recommended)
-```bash
-# Session 1: Planning (review carefully)
-/plan "Add feature X"
-# Creates planning docs, stops after 02-solution-plan.md
-# Review at your leisure
-
-# Session 2: Implementation (same day or later)
-/dev-cycle "Add feature X"
-# Detects existing plan
-# Asks: "Use existing plan or start fresh?"
-# Choose: Use existing → skips to development
-
-# OR just:
-/develop
-# Uses existing 02-solution-plan.md
-
-# Session 3: Testing
-/test
-# Creates comprehensive tests
-```
-
-**Workflow B is recommended** because:
-- Planning can be reviewed carefully offline
-- Implementation can happen in a separate session
-- No rush to approve each phase immediately
-- Can share plan with team before implementing
-
-## Resuming After Stop
-
-If user stops at any phase, they can resume:
-
-```
-Stopped after requirements:
-→ /plan "Continue with [feedback]"
-
-Stopped after solution planning:
-→ /develop  (or /dev-cycle with existing plan)
-
-Stopped after development:
-→ /test
-```
-
-## Example Session
-
-```
-User: /dev-cycle "Add customer email validation"
-
-Claude: Spawning requirements-engineer...
-[Agent runs]
-
-Claude: Requirements analysis complete → .dev/01-requirements.md
-
-Summary:
-- Validate email format on customer record
-- Block invalid emails on save
-- Support multiple email formats
-- Show user-friendly error messages
-
-[AskUserQuestion: Approve / Refine / Stop]
-
-User: [Selects "Approve - Continue to solution planning"]
-
-Claude: Spawning solution-planner...
-[Agent runs]
-
-Claude: Solution plan complete → .dev/02-solution-plan.md
-
-Architecture summary:
-- Table extension on Customer table
-- Separate validation codeunit
-- Event subscriber for additional checks
-
-Implementation summary:
-- 4 files to create
-- 3 implementation phases
-- Estimated 60 minutes
-
-[AskUserQuestion: Approve / Refine / Start Implementation / Stop]
-
-User: [Selects "Refine - Need changes"]
-
-Claude: What changes would you like to the solution plan?
-
-User: "Use FlowFields instead of calculated fields for better performance"
-
-Claude: Re-running solution-planner with your feedback...
-[Agent runs with constraint]
-
-Claude: Solution plan revised → .dev/02-solution-plan.md
-
-Updated:
-- Added FlowFields for real-time calculations
-- Updated implementation plan for FlowField setup
-- Performance improved with database-level calculation
-
-[AskUserQuestion: Approve / Refine / Start Implementation / Stop]
-
-User: [Selects "Approve - Start implementation"]
-
-[Workflow continues to development phase...]
-```
-
-## Implementation Notes
-
-### Reading Output Files
-
-After each agent, **always read the output file** and show key points:
-
-```
-Read .dev/01-requirements.md
-Extract:
-- Number of requirements
-- Key functionality
-- Integration points
-- Assumptions
-
-Read .dev/02-solution-plan.md
-Extract:
-- Architecture approach
-- Number of objects/files
-- Implementation phases
-- Estimated effort
-```
-
-### Concise Summaries
-
-Show 3-5 bullet points, not full file contents:
-
-✅ **Good:**
-```
-Key findings:
-- 3 table extensions needed
-- Event subscriber for posting validation
-- 2 page extensions for UI
-```
-
-❌ **Too verbose:**
-```
-[dumps entire 200-line file contents]
-```
-
-### Trust the User
-
-If user approves, don't second-guess:
-- Don't say "Are you sure?"
-- Just continue to next phase
+**Alternative:** Use `/plan` first (review offline), then `/develop` later (recommended for large features).
 
 ---
 
-**Remember:** This is a collaborative workflow. The user reviews and approves each major phase before proceeding.
+**Remember:** You spawn agents. Agents do the work. You just orchestrate and get approvals.

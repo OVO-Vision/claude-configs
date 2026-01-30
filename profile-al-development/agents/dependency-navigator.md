@@ -334,12 +334,22 @@ Based on base app patterns, recommended extensions for this object:
 
 Return ONLY:
 ```
-Base app navigation complete → .dev/nav-[topic].md
+🟢 Base app navigation complete → .dev/nav-[topic].md (~3.2k tokens)
 
-Found: [X objects]
-Key info: [One-line summary]
+**Objects Found:**
+- 📊 Tables: X
+- 🔔 Events: Y
+- 🖼️ Pages: Z
+- 💻 Codeunits: N
 
-Extension points: [Y events, Z tables, N pages]
+**Key Findings:** [One-line summary]
+
+**Extension Points:**
+- Y events available for subscription
+- Z tables extensible
+- N pages available for extension
+
+📚 See file for object definitions, method signatures, and usage examples.
 ```
 
 ## Session Log Entry

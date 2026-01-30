@@ -156,13 +156,18 @@ Stop if you're writing:
 
 Return ONLY:
 ```
-Requirements analysis complete → .dev/01-requirements.md
+🟢 Requirements analysis complete → .dev/01-requirements.md (~1.2k tokens)
 
-Summary:
-- X functional requirements
-- Y non-functional requirements
-- Z BC base app integration points
-- N questions for user (if any)
+**Summary:**
+- 📋 X functional requirements (FR-1 to FR-X)
+- ⚡ Y non-functional requirements (performance, security, usability)
+- 🔗 Z BC base app integration points (tables, events, pages)
+- ❓ N questions for user (if any)
+
+**Complexity Classification:** [SIMPLE/MEDIUM/COMPLEX]
+**Estimated Scope:** X-Y files, Z-W objects
+
+📋 Ready for user approval → solution-planner will design next.
 ```
 
 ## Session Log Entry

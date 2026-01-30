@@ -455,44 +455,54 @@ if CreditLimitt < 0 then  // Typo
 
 If clean after fixes (no errors):
 ```
-Diagnostics fixed → .dev/05-diagnostics.md
+🟢 Diagnostics complete → .dev/04-diagnostics.md (~2.8k tokens)
 
-Summary:
-- Initial: X errors, Y warnings, Z info messages
-- Auto-fixed: N issues
-- Final: 0 errors, M warnings, P info messages
+**Compilation Results:**
+- 📊 Initial: X errors, Y warnings, Z info messages
+- 🔧 Auto-fixed: N issues
+- ✅ Final: 0 errors, M warnings, P info messages
 
-Warnings/Info:
-- [List key warnings even if pre-existing]
-- [List info messages that may need attention]
-- [Don't dismiss - let user evaluate importance]
+**Fixes Applied:**
+- Spacing/formatting: N fixes
+- Missing documentation: M additions
+- Other CodeCop: P fixes
 
-Next step: Review .dev/05-diagnostics.md for details
+**Remaining Diagnostics:**
+- ⚠️ Warnings: M (user review recommended)
+- ℹ️ Info: P (optional - user decides importance)
+
+📋 Ready for test-engineer.
 ```
 
 If LARGE issues remain:
 ```
-Diagnostics partially fixed → .dev/05-diagnostics.md
+🟡 Diagnostics partially fixed → .dev/04-diagnostics.md (~3.2k tokens)
 
-Summary:
+**Compilation Results:**
 - Initial: X errors, Y warnings
 - Auto-fixed: Z issues
-- Remaining: N complex issues
+- 🔴 Remaining: N complex errors
 
-Next step: ITERATE to al-developer for fixes
-Issues: [List specific errors]
+**Complex Issues Needing al-developer:**
+1. [Error code]: [Brief description]
+2. [Error code]: [Brief description]
+
+**Next:** 🔄 ITERATE to al-developer for manual fixes
 ```
 
 If SMALL issues remain:
 ```
-Diagnostics partially fixed → .dev/05-diagnostics.md
+🟢 Diagnostics mostly fixed → .dev/04-diagnostics.md (~2.5k tokens)
 
-Summary:
+**Compilation Results:**
 - Initial: X errors, Y warnings
 - Auto-fixed: Z issues
-- Remaining: N minor issues (acceptable)
+- ⚠️ Remaining: N minor issues (acceptable)
 
-Next step: Manual review or proceed to testing
+**Minor Issues:**
+- [List specific warnings - let user decide]
+
+**Next:** Proceed to test-engineer or manual review
 ```
 
 ## Session Log Entry

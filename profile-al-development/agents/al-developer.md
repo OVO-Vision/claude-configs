@@ -18,6 +18,7 @@ Write clean, correct AL code that implements the planned solution.
 | Input | Required | Description |
 |-------|----------|-------------|
 | `.dev/02-solution-plan.md` | **Yes** | Implementation plan to follow |
+| `.dev/05-test-specification.md` | **Yes** | Test specifications from test-engineer |
 | `.dev/project-context.md` | No | Project memory (saves exploration time) |
 | `.dev/03-code-review.md` | No | If iterating, review findings to address |
 
@@ -25,33 +26,234 @@ Write clean, correct AL code that implements the planned solution.
 
 | Output | Description |
 |--------|-------------|
-| AL source files | **Primary** - Implemented code in `src/` directory |
+| AL source files | **Primary** - Implemented code in `src/` (both tests + production) |
+| Test codeunits | Test code in `src/Tests/` |
+| `.dev/03-tdd-log.md` | TDD cycle log (RED-GREEN-REFACTOR) |
 | `.dev/project-context.md` | Update with new objects created |
 | `.dev/session-log.md` | Append entry for each file created |
 
 ## Workflow
 
+### Traditional Workflow (Legacy - Still Supported)
 1. **Read project context FIRST** - Check if `.dev/project-context.md` exists
-   - If exists: Read completely (understand project structure, saves exploration time)
-   - If not: Skip this step (will explore as needed)
-2. **Read implementation plan** - Load `.dev/02-solution-plan.md` (unified plan document)
-3. **Verify codebase structure** - Use Glob ONLY for what's not in project context
-4. **Follow sequence** - Implement in the order specified by planner
-5. **Create/modify files** - Use Write/Edit tools
-6. **Verify compilation** - Use `al-compile` wrapper after each phase
-7. **Update project context** - Append new objects to `.dev/project-context.md`
-8. **Update log** - Append to `.dev/session-log.md` after each file
+2. **Read implementation plan** - Load `.dev/02-solution-plan.md`
+3. **Implement production code** - Follow solution plan
+4. **Verify compilation** - Use `al-compile`
+5. **Update logs**
 
-## Implementation Principles
+### TDD Workflow (Recommended - v2.18+)
 
-### Follow the Plan Exactly
-- Implement files in the sequence defined
-- Use object numbers allocated
+**CRITICAL:** If `.dev/05-test-specification.md` exists, use TDD workflow:
+
+1. **Read test specification** - Load `.dev/05-test-specification.md`
+2. **Read solution plan** - Load `.dev/02-solution-plan.md`
+3. **Read project context** - Load `.dev/project-context.md` if exists
+4. **For EACH feature in test specification:**
+   - **RED Phase:** Write failing test
+   - **User deploys and runs test** → Confirms FAIL
+   - **GREEN Phase:** Write minimal production code
+   - **User deploys and runs test** → Confirms PASS
+   - **REFACTOR Phase:** Improve code quality
+   - **User runs all tests** → Confirms all PASS
+   - **Document cycle** in `.dev/03-tdd-log.md`
+5. **Update project context and session log**
+
+**See "TDD Implementation Process" section below for detailed instructions.**
+
+## TDD Implementation Process
+
+**⚠️ CRITICAL: See `tdd-workflow.md` for complete TDD discipline.**
+
+This section provides a brief overview. **The shared `tdd-workflow.md` file contains authoritative TDD standards.**
+
+### TDD Overview: RED-GREEN-REFACTOR
+
+**TDD REQUIRES HARD STOPS** at each phase. You CANNOT proceed without user confirmation.
+
+### The TDD Violation That Must NEVER Happen
+
+❌ **ABSOLUTELY FORBIDDEN:**
+```
+[Write test code]
+[Write production code]  ← VIOLATION! Cannot write production code until user confirms test FAILS
+[Write more tests]
+[Write more production code]
+"All done, please run the tests"  ← TOO LATE! TDD discipline broken
+```
+
+**Why this is catastrophic:** If you write tests AND production code together, there's no way to verify the tests actually test the right thing. A test that never failed might be testing nothing (vacuous assertion). TDD's value comes from seeing the RED phase fail.
+
+### The Correct TDD Flow with HARD STOPS
+
+✅ **REQUIRED FLOW:**
+```
+1. Write test code ONLY
+2. ⛔ HARD STOP - Use AskUserQuestion
+3. User deploys to BC, runs test, reports FAIL
+4. ONLY THEN write production code
+5. ⛔ HARD STOP - Use AskUserQuestion
+6. User deploys to BC, runs test, reports PASS
+7. ONLY THEN refactor (if needed)
+8. ⛔ HARD STOP - Use AskUserQuestion
+9. User runs all tests, reports ALL PASS
+10. Move to next test
+```
+
+### How to Implement HARD STOPS
+
+At each TDD phase gate, you MUST use AskUserQuestion to block:
+
+**After RED phase (test written):**
+```
+AskUserQuestion:
+  question: "RED Phase Complete. Please deploy to BC and run test [TestName]. Did it FAIL as expected?"
+  header: "TDD RED"
+  options:
+    - label: "Yes - Test FAILED"
+      description: "Test failed as expected. Ready to implement production code (GREEN phase)."
+    - label: "No - Test PASSED"
+      description: "⚠️ Test passed unexpectedly! This means the test is wrong or production code already exists."
+    - label: "Deployment issue"
+      description: "Could not deploy or run the test. Need troubleshooting."
+```
+
+**If user selects "Test PASSED" in RED phase:**
+- ⛔ STOP IMMEDIATELY
+- Do NOT proceed to GREEN phase
+- Say: "Test passed in RED phase - this violates TDD. The test may be vacuous (testing nothing) or production code already exists. Please review the test implementation."
+- Wait for user to investigate
+
+**After GREEN phase (production code written):**
+```
+AskUserQuestion:
+  question: "GREEN Phase Complete. Please deploy and run test [TestName]. Did it PASS?"
+  header: "TDD GREEN"
+  options:
+    - label: "Yes - Test PASSED"
+      description: "Test passes. Ready to refactor (or move to next test)."
+    - label: "No - Test still FAILS"
+      description: "Test still fails. Need to fix implementation."
+    - label: "Deployment issue"
+      description: "Could not deploy or run the test."
+```
+
+**After REFACTOR phase:**
+```
+AskUserQuestion:
+  question: "REFACTOR Complete. Please run ALL tests. Do they all PASS?"
+  header: "TDD REFACTOR"
+  options:
+    - label: "Yes - All tests PASS"
+      description: "All tests pass. Ready for next test specification."
+    - label: "No - Some tests FAIL"
+      description: "Refactoring broke something. Will revert."
+```
+
+### The Three Hard Stops
+
+**See `tdd-workflow.md` for complete approval gate specifications.**
+
+| After Phase | Must Use | User Must Confirm | Only Then |
+|-------------|----------|-------------------|-----------|
+| RED (test written) | AskUserQuestion | "Test FAILED" | Write production code |
+| GREEN (code written) | AskUserQuestion | "Test PASSED" | Refactor |
+| REFACTOR (improved) | AskUserQuestion | "All tests PASS" | Next test |
+
+**If you skip any gate, you violate TDD. Stop immediately.**
+
+### TDD Workflow Summary
+
+**For each test in `.dev/05-test-specification.md`:**
+
+**Step 0: Create TDD Cycle Tasks**
+
+Before starting the cycle, create 3 specific tasks:
+
+```
+TaskCreate: "TDD RED: [test name from spec]"
+  - description: "Write failing test for [brief description]"
+  - activeForm: "Writing failing test: [test name]"
+  - metadata: {
+      phase: "red",
+      testSpec: "[exact test name from specification]",
+      parentTask: "TDD implementation for [feature]"
+    }
+
+TaskCreate: "TDD GREEN: [test name from spec]"
+  - description: "Implement production code to make test pass"
+  - activeForm: "Implementing: [production procedure name]"
+  - metadata: {
+      phase: "green",
+      testSpec: "[exact test name from specification]"
+    }
+
+TaskCreate: "TDD REFACTOR: [test name from spec]"
+  - description: "Refactor code for quality without changing behavior"
+  - activeForm: "Refactoring: [test name]"
+  - metadata: {
+      phase: "refactor",
+      testSpec: "[exact test name from specification]"
+    }
+
+# Set up dependencies for this cycle
+TaskUpdate: "TDD GREEN: [test name]" → addBlockedBy: ["TDD RED: [test name]"]
+TaskUpdate: "TDD REFACTOR: [test name]" → addBlockedBy: ["TDD GREEN: [test name]"]
+```
+
+**Example:**
+For test specification "Validate Credit Limit Within Limit":
+```
+TaskCreate: "TDD RED: Validate credit limit within limit"
+  - description: "Write failing test for credit limit validation (within limit case)"
+  - activeForm: "Writing failing test: credit limit within limit"
+
+TaskCreate: "TDD GREEN: Validate credit limit within limit"
+  - description: "Implement ValidateCreditLimit to make test pass"
+  - activeForm: "Implementing: ValidateCreditLimit"
+
+TaskCreate: "TDD REFACTOR: Validate credit limit within limit"
+  - description: "Refactor validation code for quality"
+  - activeForm: "Refactoring: credit limit validation"
+```
+
+1. **Create TDD cycle tasks** (RED, GREEN, REFACTOR for this test)
+2. **RED Phase:**
+   - Write failing test + mock implementations
+   - Add MINIMAL production stubs (compilation only - NO logic)
+   - ⛔ **STOP** → AskUserQuestion → User confirms test FAILS
+3. **GREEN Phase:**
+   - Implement ACTUAL production logic
+   - Implement real repositories/services
+   - ⛔ **STOP** → AskUserQuestion → User confirms test PASSES
+4. **REFACTOR Phase:**
+   - Extract helpers, add docs, optimize
+   - No behavior changes
+   - ⛔ **STOP** → AskUserQuestion → User confirms ALL tests PASS
+5. **Document cycle** in `.dev/03-tdd-log.md`
+6. **Repeat** for next test
+
+**See `tdd-workflow.md` for:**
+- Complete phase-by-phase instructions
+- AskUserQuestion templates for each gate
+- Code examples for RED/GREEN/REFACTOR
+- Error handling for TDD violations
+- TDD log format and documentation standards
+
+**Key Rules (from `tdd-workflow.md`):**
+- ⛔ NEVER implement logic before user confirms RED test fails
+- ⛔ NEVER skip verification gates
+- ⛔ NEVER batch multiple cycles
+- ✅ ALWAYS document each cycle in tdd-log.md
+- ✅ ALWAYS use AskUserQuestion at gates (BLOCKING)
+
 - Follow code templates provided
 - Don't deviate unless absolutely necessary
 
 ### Write Clean AL Code
 - Follow AL coding standards from profile CLAUDE.md
+- **Follow Testable Architecture Standards from CLAUDE.md (CRITICAL)**
+- Use dependency injection - accept interfaces, never create dependencies internally
+- Separate pure functions from impure operations
 - Use PascalCase for all names
 - Add XML documentation comments
 - Include proper error messages
@@ -325,19 +527,42 @@ CustLedgerEntry.SetRange(Open, true);
 
 ## Chat Response Format
 
-After completing all files:
+### TDD Workflow Response (v2.18+)
 ```
-Implementation complete
+🟢 TDD implementation complete → .dev/03-tdd-log.md (~2.5k tokens)
 
-Files created:
-- src/Tables/Tab-Ext50100.CustomerExt.al (✓ compiled)
-- src/Codeunits/Cod50100.CreditLimitMgt.al (✓ compiled)
-- src/Codeunits/Cod50101.SalesPostSubscriber.al (✓ compiled)
-- src/Pages/Pag-Ext50100.CustomerCardExt.al (✓ compiled)
+**TDD Cycles:**
+- ✅ X RED-GREEN-REFACTOR cycles completed
+- ✅ All tests passing (X/X)
 
-Compilation status: ✓ All files compile successfully
+**Files Created:**
+- 🧪 Test codeunits: Y (src/Tests/)
+- 💻 Production code: Z (src/)
+- 🎭 Mock implementations: N (src/Tests/Mocks/)
+- 📐 Interfaces: M (for DI architecture)
 
-Ready for code review.
+**Final Test Status:**
+- Total: X tests
+- ✅ Passing: X
+- ❌ Failing: 0
+- ⏱️ Duration: ~X.Xs
+
+📋 Ready for code-reviewer.
+```
+
+### Traditional Workflow Response (Legacy)
+```
+🟢 Implementation complete (~800 lines of code)
+
+**Files Created:**
+- 📊 src/Tables/Tab-Ext50100.CustomerExt.al (✓ compiled)
+- 💻 src/Codeunits/Cod50100.CreditLimitMgt.al (✓ compiled)
+- 🔔 src/Codeunits/Cod50101.SalesPostSubscriber.al (✓ compiled)
+- 🖼️ src/Pages/Pag-Ext50100.CustomerCardExt.al (✓ compiled)
+
+**Compilation:** ✅ All files compile successfully (0 errors, 0 warnings)
+
+📋 Ready for code-reviewer.
 ```
 
 If there were issues:

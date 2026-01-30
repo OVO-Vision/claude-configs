@@ -13,163 +13,124 @@ Run only the development phase with automatic iteration loops for quality.
 /develop
 ```
 
-**Prerequisite:** Must have `.dev/02-solution-plan.md` from planning phase.
+**Prerequisites:**
+- Must have `.dev/02-solution-plan.md` from planning phase
+- Should have `.dev/05-test-specification.md` for TDD workflow (recommended)
 
-## Step 0: Check/Create Tasks
+## ⚠️ CRITICAL: How This Command Works
 
-**Check for existing tasks from `/plan`:**
+**You are the ORCHESTRATOR. Agents are the WORKERS.**
+
+Your job:
+1. Create/check tasks (for tracking)
+2. **SPAWN AGENTS** to do the work
+3. Update task status
+
+**DO NOT implement code yourself. SPAWN al-developer, code-reviewer, diagnostics-fixer.**
+
+## Step 0: Check/Create Development Tasks
 
 ```
-TaskList → Check if Development task exists
-  - If exists and Planning completed → Continue
-  - If not exists → Create development tasks
+TaskList → Check existing tasks
+
+# Extract feature name, create if needed:
+TaskCreate: "TDD implementation for [feature]" (parent - al-developer creates child tasks)
+TaskCreate: "Review code for [feature]"
+TaskCreate: "Fix compilation issues for [feature]"
+
+# Set dependencies
+TaskUpdate: "TDD implementation for [feature]" → addBlockedBy: ["Design test specification for [feature]"]
+TaskUpdate: "Review code for [feature]" → addBlockedBy: ["TDD implementation for [feature]"]
+TaskUpdate: "Fix compilation issues for [feature]" → addBlockedBy: ["Review code for [feature]"]
 ```
 
-**Create development tasks if needed:**
+## Workflow
 
-```
-TaskCreate: "Development"
-  - description: "Implement AL code per solution plan"
-  - activeForm: "Implementing code"
+**Step 1: Detect TDD vs Traditional**
 
-TaskCreate: "Code Review"
-  - description: "Review code for quality and standards"
-  - activeForm: "Reviewing code"
-
-TaskCreate: "Diagnostics"
-  - description: "Fix compilation issues"
-  - activeForm: "Fixing diagnostics"
-
-TaskUpdate: "Code Review" → addBlockedBy: ["Development"]
-TaskUpdate: "Diagnostics" → addBlockedBy: ["Code Review"]
+```bash
+ls .dev/05-test-specification.md
+# If exists → Use TDD workflow (steps 2-4)
+# If not → Use traditional workflow (steps 5-7)
 ```
 
-## What It Does
+**Steps 2-4: TDD Implementation (if test spec exists)**
 
-Runs development agents with iteration loops and task tracking:
+2. TaskUpdate: "TDD implementation for [feature]" → in_progress
+3. **→ SPAWN al-developer** - Tell agent the TDD discipline:
 
-### Initial Implementation
-1. **TaskUpdate:** "Development" → status: "in_progress"
-2. **Spawn al-developer** - Implement AL code from plan
-3. **TaskUpdate:** "Development" → status: "completed"
+   **CRITICAL TDD WORKFLOW - FOR EACH TEST:**
 
-### Code Review Loop (Iterative)
-4. **TaskUpdate:** "Code Review" → status: "in_progress"
-5. **Spawn code-reviewer** - Review code quality
-6. **Evaluate findings:**
-   - **If Critical/High issues:**
-     - TaskUpdate: "Code Review" → status: "completed", metadata: {passed: false}
-     - TaskUpdate: "Development" → status: "in_progress" (reset)
-     - ITERATE back to al-developer → Go to step 2
-   - **If only Medium/Low issues:**
-     - TaskUpdate: "Code Review" → status: "completed", metadata: {passed: true}
-     - Continue to step 7
+   **RED Phase (Write Failing Test):**
+   - Write the test code
+   - Add ONLY minimal code to compile (empty procedures, default returns, no logic)
+   - Create child task: "TDD RED: [test name]"
+   - **STOP → Ask user to deploy and run test → Verify test FAILS**
+   - Only proceed to GREEN after user confirms FAIL
 
-### Compilation Loop (Iterative)
-7. **TaskUpdate:** "Diagnostics" → status: "in_progress"
-8. **Spawn diagnostics-fixer** - Fix auto-fixable issues
-9. **Evaluate compilation:**
-   - **If complex errors (3+ or logic issues):**
-     - TaskUpdate: "Diagnostics" → status: "completed", metadata: {clean: false}
-     - ITERATE back to al-developer → Go to step 1
-   - **If minor/no errors:**
-     - TaskUpdate: "Diagnostics" → status: "completed", metadata: {clean: true}
-     - Done
+   **GREEN Phase (Make It Pass):**
+   - NOW implement the actual production logic
+   - Create child task: "TDD GREEN: [test name]"
+   - **STOP → Ask user to deploy and run test → Verify test PASSES**
+   - Only proceed to REFACTOR after user confirms PASS
+
+   **REFACTOR Phase (Improve Code):**
+   - Improve code quality (extract helpers, add docs, optimize)
+   - Create child task: "TDD REFACTOR: [test name]"
+   - **STOP → Ask user to run ALL tests → Verify ALL tests PASS**
+   - Only proceed to next test after user confirms ALL PASS
+
+   **Rules:**
+   - NEVER implement logic before user verifies test fails
+   - NEVER skip verification gates
+   - Document all cycles in `.dev/03-tdd-log.md`
+
+4. TaskUpdate: "TDD implementation for [feature]" → completed
+
+**Steps 5-7: Traditional Implementation (no test spec)**
+
+5. TaskUpdate: "Implement [feature]" → in_progress
+6. **→ SPAWN al-developer** - Tell agent:
+   - "Implement from `.dev/02-solution-plan.md`"
+7. TaskUpdate: "Implement [feature]" → completed
+
+**Steps 8-11: Code Review Loop**
+
+8. TaskUpdate: "Review code for [feature]" → in_progress
+9. **→ SPAWN code-reviewer** (reviews test + production code)
+10. **Evaluate:**
+    - **Critical/High issues:** Create iteration task, loop back to step 3 (or 6 if traditional)
+    - **Medium/Low issues:** Continue to step 11
+11. TaskUpdate: "Review code for [feature]" → completed
+
+**Steps 12-15: Compilation Loop**
+
+12. TaskUpdate: "Fix compilation issues for [feature]" → in_progress
+13. **→ SPAWN diagnostics-fixer** (auto-fixes simple issues)
+14. **Evaluate:**
+    - **Complex errors (3+ or logic):** Create iteration task, loop back to step 3 (or 6 if traditional)
+    - **Minor/no errors:** Done
+15. TaskUpdate: "Fix compilation issues for [feature]" → completed
 
 ## Iteration Logic
 
-### Code Review Triggers Iteration When:
-- **Critical issues found** (security, crashes, compliance)
-- **High priority issues found** (performance, DRY violations, missing functionality)
-
-### Diagnostics Fixer Triggers Iteration When:
-- **3+ complex compiler errors** remain after auto-fixing
-- **Logic errors** (type mismatches requiring business decisions)
-- **Missing declarations** (ambiguous fixes)
-- **Breaking changes** (API modifications)
-
-### No Iteration When:
-- Only Medium/Low code review issues (documentation, minor style)
-- Only 1-2 trivial compiler errors (typos, semicolons)
-- Only warnings (CodeCop style issues)
+**Code review triggers iteration:** Critical/High issues (security, performance, DRY, missing functionality)
+**Diagnostics triggers iteration:** 3+ complex errors or logic issues
+**No iteration:** Only Medium/Low issues or 1-2 trivial errors
 
 ## Output Files
 
-- `.dev/03-code-review.md` - Code quality assessment
-- `.dev/05-diagnostics.md` - Compilation diagnostics
-- AL code files created/modified (in `src/`)
-- `.dev/session-log.md` - Updated with all iterations
-
-## Expected Duration
-
-- **Initial implementation:** ~5-10 min
-- **Code review:** ~3-5 min per iteration
-- **If iteration needed:** +5-10 min per loop (typically 0-2 loops)
-- **Diagnostics fixing:** ~2-5 min
-
-**Total:** 10-30 minutes (depending on code quality and iterations)
+- `.dev/03-tdd-log.md` (if TDD) or production code
+- `.dev/03-code-review.md`
+- `.dev/04-diagnostics.md`
+- `.dev/session-log.md`
 
 ## When to Use
 
-- Have implementation plan ready (`.dev/02-solution-plan.md`)
-- Want to implement existing plan with quality checks
-- Re-implementing after design changes
-- Continuing from `/plan` command
-
-## Iteration Examples
-
-### Example 1: Clean Implementation (No Iteration)
-```
-al-developer runs → code complete
-code-reviewer runs → Only Medium/Low issues (documentation)
-diagnostics-fixer runs → Clean compilation
-✓ Done in 12 minutes
-```
-
-### Example 2: Single Iteration (Critical Bug)
-```
-al-developer runs → code complete
-code-reviewer runs → 1 Critical issue (missing error handling)
-  ↻ ITERATE: al-developer fixes error handling
-code-reviewer runs → Only Low issues
-diagnostics-fixer runs → Clean compilation
-✓ Done in 18 minutes (1 iteration)
-```
-
-### Example 3: Two Iterations (Complex Errors)
-```
-al-developer runs → code complete
-code-reviewer runs → 2 High issues (performance, DRY)
-  ↻ ITERATE: al-developer fixes performance + DRY
-code-reviewer runs → All clear
-diagnostics-fixer runs → 5 type mismatch errors
-  ↻ ITERATE: al-developer fixes type errors
-code-reviewer runs → All clear
-diagnostics-fixer runs → Clean compilation
-✓ Done in 27 minutes (2 iterations)
-```
-
-## What Gets Fixed Where
-
-| Issue Type | Handler | Iteration? |
-|------------|---------|------------|
-| Missing error handling | code-reviewer detects → al-developer fixes | Yes |
-| DRY violations | code-reviewer detects → al-developer fixes | Yes |
-| Performance issues | code-reviewer detects → al-developer fixes | Yes |
-| Type mismatches | diagnostics-fixer detects → al-developer fixes | Yes (if complex) |
-| Logic errors | diagnostics-fixer detects → al-developer fixes | Yes |
-| Missing spaces | diagnostics-fixer auto-fixes | No |
-| Missing parentheses | diagnostics-fixer auto-fixes | No |
-| Missing documentation | code-reviewer documents → diagnostics-fixer may add | No |
-| Style warnings | diagnostics-fixer auto-fixes | No |
-
-## Next Steps
-
-After development completes:
-1. Review `.dev/03-code-review.md` for any remaining Medium/Low issues
-2. Review `.dev/05-diagnostics.md` for compilation status
-3. Run `/test` to create comprehensive tests
+- Have `.dev/02-solution-plan.md` ready
+- Continuing from `/plan`
+- Want automatic quality checks with iteration loops
 
 ---
 
-**Note:** The iteration loops ensure high-quality code before proceeding to testing, catching issues early when they're easier to fix.
+**Remember:** Spawn agents. Don't implement code yourself.

@@ -363,6 +363,40 @@ cat ~/claude-configs/profile-al-development/.claude-plugin/plugin.json
 rm -rf .dev/
 ```
 
+## Recommended Hooks
+
+Desktop notifications for when Claude needs your attention or finishes work. Add to your user or project settings (not in the plugin):
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "notify-send -t 7000 'Claude Code' 'Question: Waiting for your answer'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "notify-send -t 5000 'Claude Code' 'Done: Ready for input'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Note:** These hooks go in `~/.claude/settings.json` (user) or `.claude/settings.json` (project), not in the plugin itself. Replace `notify-send` with your system's notification command if not on Linux.
+
 ## Requirements
 
 - Claude Code CLI

@@ -28,14 +28,25 @@ Identify code quality issues, standard violations, potential bugs, and improveme
 | `.dev/03-code-review.md` | **Primary** - Review findings and recommendations |
 | `.dev/session-log.md` | Append entry with summary |
 
+## Feedback Resolution Protocol
+
+This agent follows the **Feedback Resolution Protocol** defined in `feedback-resolution.md`.
+
+- Classify all findings with severity: **CRITICAL**, **SERIOUS**, or **MINOR**
+- The review loop exits ONLY when reviewer states: **"APPROVED: Proceed to [next step]"**
+- al-developer must disposition every finding (ACCEPT-FIX / ACCEPT-DEFER / ACKNOWLEDGE / DISMISS)
+- CRITICAL findings must be ACCEPT-FIX — no exceptions
+- See `feedback-resolution.md` for full protocol details
+
 ## Workflow
 
 1. **Read implementation plan** - Load `.dev/02-solution-plan.md` for context
 2. **Find implemented files** - Use Glob to locate all AL files
 3. **Review each file** - Check against standards and best practices
-4. **Categorize findings** - Critical, High, Medium, Low
+4. **Categorize findings** - CRITICAL, SERIOUS, MINOR (per Feedback Resolution Protocol)
 5. **Write report** - Create `.dev/03-code-review.md`
-6. **Update log** - Append to `.dev/session-log.md`
+6. **State verdict** - End with explicit "APPROVED: Proceed to diagnostics" or "CHANGES REQUIRED: Iterate to al-developer"
+7. **Update log** - Append to `.dev/session-log.md`
 
 ## Tool Usage
 
@@ -57,7 +68,81 @@ Identify code quality issues, standard violations, potential bugs, and improveme
 - DataClassification set on all fields
 - ApplicationArea set on all controls
 
-### 2. Code Quality (⚠️ DRY/SOLID = HIGH PRIORITY)
+### 2. Testability (⚠️ CRITICAL for v2.18+ TDD Workflow)
+
+**Testability violations → CRITICAL/HIGH (blocks approval)**
+
+Check against "Testable Architecture Standards" in CLAUDE.md:
+
+- [ ] **Dependency Injection:**
+  - Business logic accepts dependencies as parameters (interfaces)?
+  - No direct table access in business logic codeunits?
+  - No `WorkDate()`, `Time()`, `Random()` in business logic?
+
+- [ ] **Interface-Based Design:**
+  - All external dependencies have interfaces?
+  - Interfaces used instead of concrete implementations?
+  - Mock implementations exist for testing?
+
+- [ ] **Pure vs. Impure Separation:**
+  - Business logic is pure (deterministic, no side effects)?
+  - Database access isolated in repository codeunits?
+  - I/O operations (HTTP, files) isolated in service codeunits?
+
+**Examples of Testability Violations:**
+
+❌ **CRITICAL: Direct Database Access in Business Logic**
+```al
+codeunit 50100 "Order Validator"
+{
+    procedure ValidateOrder(OrderNo: Code[20]): Boolean
+    var
+        Customer: Record Customer;  // ❌ Direct table access
+    begin
+        Customer.Get(OrderNo);  // ❌ Cannot mock for testing
+        exit(Customer.CreditLimit > 0);
+    end;
+}
+```
+
+✅ **CORRECT: Interface-Based Design**
+```al
+codeunit 50100 "Order Validator"
+{
+    procedure ValidateOrder(
+        OrderNo: Code[20];
+        CustomerRepo: Interface ICustomerRepository  // ✅ Injected dependency
+    ): Boolean
+    var
+        Customer: Record Customer;
+    begin
+        if not CustomerRepo.TryGetCustomer(OrderNo, Customer) then  // ✅ Mockable
+            exit(false);
+        exit(Customer.CreditLimit > 0);
+    end;
+}
+```
+
+❌ **HIGH: System Time in Business Logic**
+```al
+procedure IsOrderOverdue(OrderDate: Date): Boolean
+begin
+    exit(OrderDate < WorkDate());  // ❌ Not testable with fixed dates
+end;
+```
+
+✅ **CORRECT: Time Provider Interface**
+```al
+procedure IsOrderOverdue(
+    OrderDate: Date;
+    TimeProvider: Interface ITimeProvider  // ✅ Injected
+): Boolean
+begin
+    exit(OrderDate < TimeProvider.Today());  // ✅ Deterministic for tests
+end;
+```
+
+### 3. Code Quality (⚠️ DRY/SOLID = HIGH PRIORITY)
 
 **DRY Violations → HIGH (blocks approval)**
 - Grep for duplicated patterns across files
@@ -72,31 +157,43 @@ Identify code quality issues, standard violations, potential bugs, and improveme
 - XML documentation on public procedures
 - Meaningful variable names
 
-### 3. Performance
+### 4. Performance
 - SetLoadFields used where appropriate
 - Filtering before loading records
 - FindSet vs Find usage
 - No unnecessary loops
 - Efficient queries
 
-### 4. BC Best Practices
+### 5. BC Best Practices
 - Table extensions (not base modifications)
 - Event subscribers (not code changes)
 - Proper event signature
 - Error vs. Message usage
 - Transaction handling
 
-### 5. Security & Data
+### 6. Security & Data
 - DataClassification appropriate
 - Permission requirements documented
 - No hardcoded credentials
 - Proper field validation
 
-### 6. Functionality
+### 7. Functionality
 - Implements requirements correctly
 - Edge cases handled
 - Error messages are user-friendly
 - Logic is correct
+
+### 8. Test Code Quality (v2.18+ TDD Workflow)
+
+If test codeunits exist (TDD workflow):
+
+- [ ] **Test coverage:** All business logic has tests?
+- [ ] **Test structure:** [GIVEN]/[WHEN]/[THEN] pattern used?
+- [ ] **Test isolation:** Tests use mocks, not real database?
+- [ ] **Test naming:** Descriptive names (`Test_Scenario_ExpectedOutcome`)?
+- [ ] **Mock quality:** Mock implementations match interfaces correctly?
+- [ ] **Assertions:** Clear, meaningful assertion messages?
+- [ ] **Test data:** Isolated test data (TEST* prefixes)?
 
 ## Output Format: `.dev/03-code-review.md`
 
@@ -459,21 +556,26 @@ Overall assessment determines next step:
 
 Return ONLY:
 ```
-Code review complete → .dev/03-code-review.md
+🟢 Code review complete → .dev/03-code-review.md (~3.1k tokens)
 
-Summary:
-- Overall assessment: [Grade]
-- Critical issues: X (must fix)
-- High priority: Y (should fix)
-- Medium priority: Z
-- Low priority: N
+**Overall Assessment:** [Excellent ⭐⭐⭐⭐⭐ / Good ⭐⭐⭐⭐ / Needs Work ⭐⭐⭐]
 
-Recommendation: [Approve/Approve with changes/Rework]
+**Issues Found:**
+- 🔴 Critical: X (security, crashes, data corruption)
+- 🟡 High: Y (DRY violations, SOLID issues, performance)
+- 🟠 Medium: Z (documentation, naming, style)
+- 🟢 Low: N (suggestions, nice-to-haves)
 
-Next step:
-→ [If Critical/High issues: ITERATE to al-developer]
-→ [If only Medium/Low: Proceed to diagnostics-fixer]
-→ [If all clean: Ready for testing]
+**Testability Review:**
+- [✅/⚠️] Dependency injection compliance
+- [✅/⚠️] Interface-based design
+- [✅/⚠️] Pure function separation
+
+**Recommendation:** [APPROVED: Proceed to diagnostics / CHANGES REQUIRED: Iterate to al-developer]
+
+**Next Step:**
+→ [If CRITICAL/HIGH: 🔄 ITERATE to al-developer]
+→ [If only MEDIUM/LOW: ➡️ Proceed to diagnostics-fixer]
 ```
 
 ## Session Log Entry

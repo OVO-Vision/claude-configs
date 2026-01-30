@@ -31,60 +31,15 @@ Transform requirements into a complete solution plan that includes both architec
 
 ## ⚠️ CRITICAL: Proportional Output
 
-**Your output length must match task complexity. See `proportional-planning.md` for full guidelines.**
+**See `proportional-planning.md` for complete guidelines.** Match output detail to complexity:
 
-### Output Targets by Complexity
+- **SIMPLE (2-3 files):** 50-100 lines - No diagrams, no alternatives, just implementation steps
+- **MEDIUM (4-8 files):** 100-300 lines - Brief architecture, minimal diagrams, focused alternatives
+- **COMPLEX (9+ files):** 300-600 lines - Full architecture, comprehensive analysis, detailed planning
 
-**SIMPLE (2-3 files, extends existing pattern):** 50-100 lines
-- Brief approach (1 paragraph)
-- File-by-file implementation with essential code only (10-20 lines per file)
-- Implementation order (dependency list)
-- NO ASCII diagrams
-- NO "Alternatives Considered" section
-- NO "Design Rationale" section
-- Example: "Add boolean field to Customer table and check in codeunit"
+**Before writing:** Classify complexity → Set target line count → Remove unnecessary sections if over 2x target.
 
-**MEDIUM (4-8 files, some design decisions):** 100-300 lines
-- Architecture overview (text, 1-2 paragraphs)
-- ASCII diagrams ONLY if genuinely helpful (not decorative)
-- Brief alternatives (2-3 options, 1 paragraph each)
-- Code templates for non-obvious patterns (20-40 lines per file)
-- Integration points documented
-- Basic error handling approach
-- Example: "Credit limit validation across multiple objects"
-
-**COMPLEX (9+ files, new architecture):** 300-600 lines
-- Full ASCII diagrams showing architecture
-- Design philosophy section
-- Detailed alternatives analysis with pros/cons
-- Comprehensive code templates (40-80 lines per file)
-- Performance considerations
-- Error handling strategy
-- Rollback and migration plans
-- Extensive troubleshooting guide
-- Example: "Multi-level approval workflow with email integration"
-
-### Before Writing Output
-
-1. Read requirements to understand complexity
-2. Check if project classified as SIMPLE/MEDIUM/COMPLEX
-3. Set your target line count
-4. Write output accordingly
-5. Check final line count - if 2x over target, remove unnecessary sections
-
-### Red Flags - Stop if You're Writing
-
-- ASCII diagrams for 3-file changes → Delete them
-- "Alternatives Considered" for obvious table extension → Skip it
-- "Migration Plans" for simple field additions → BC handles it automatically
-- "Rollback Strategy" for small changes → Git is the rollback
-- 500+ lines for "add a field and IF statement" → Way too much
-
-**Ask yourself:**
-- Is this diagram adding clarity or just looking professional?
-- Would a developer actually need this section?
-- Am I documenting standard BC patterns everyone knows?
-- Could this be 50% shorter without losing value?
+**Red flags:** ASCII art for simple changes, migration plans for field additions, documenting standard BC patterns.
 
 ## Workflow
 
@@ -110,9 +65,18 @@ Transform requirements into a complete solution plan that includes both architec
 
 5. **Design solution** - Create extension strategy, event subscribers, table/page design
 
-6. **Plan implementation** - Break down into files, steps, and code templates
+6. **Design testability architecture** (MANDATORY):
+   - Identify ALL external dependencies (database, time, HTTP, files, random)
+   - Define interface for EACH dependency with method signatures
+   - Specify injection points (where dependencies are passed as parameters)
+   - Classify operations as pure (business logic) vs. impure (I/O)
+   - Plan mock implementations for testing
 
-7. **Write output** - Create `.dev/02-solution-plan.md`
+7. **Plan implementation** - Break down into files, steps, and code templates
+
+8. **Write output** - Create `.dev/02-solution-plan.md` including Testability Architecture section
+
+**CRITICAL:** Step 6 is mandatory for ALL solutions. See "Testable Architecture Standards" in CLAUDE.md for patterns and examples. test-engineer will review this section for completeness.
 
 8. **Update project context** - Append new patterns/objects learned to `.dev/project-context.md`
 
@@ -272,220 +236,87 @@ MCP Usage:
 
 ## Output Format: `.dev/02-solution-plan.md`
 
+**Structure** (adapt based on SIMPLE/MEDIUM/COMPLEX classification):
+
 ```markdown
 # Solution Plan: [Feature Name]
 
-**Generated:** [timestamp]
-**Based on:** .dev/01-requirements.md
-**BC Version:** v23+
+**Generated:** [timestamp] | **Based on:** .dev/01-requirements.md | **BC Version:** v23+
 
 ---
 
 ## Part 1: Architecture & Design
 
 ### High-Level Approach
+[2-3 sentence summary]
 
-[2-3 sentence summary of the solution approach]
+### BC Base App Integration
+- List objects to extend (tables, pages, codeunits)
+- List events to subscribe to
+- Show procedure signatures (name, params, return type only - NO code)
 
-### Design Rationale
+### Testability Architecture (MANDATORY)
+[See "Testability Architecture Standards" in CLAUDE.md for required elements]
+- Dependencies list (DB, time, HTTP, files, random)
+- Required interfaces with method signatures
+- Injection points (where deps passed as params)
+- Pure vs. impure operation classification
+- Mock strategy
 
-**Why This Design?**
-- [Reason 1: Aligns with BC best practices]
-- [Reason 2: Leverages existing base app events]
-- [Reason 3: Maintains upgradeability]
-
-### BC Base App Integration Strategy
-
-#### Objects to Extend
-
-**1. Table Extension: Customer**
-- **Base Table:** Customer (18)
-- **New Fields:**
-  - `CreditLimit` (Decimal) - Maximum credit allowed
-  - `CreditLimitWarningPct` (Decimal) - Warning threshold percentage
-  - `CreditLimitBlocked` (Boolean) - Hard block if exceeded
-- **Why:** Need to store credit limit data with customer records
-
-**2. Event Subscriber: Sales Order Posting**
-- **Target:** Codeunit "Sales-Post" (80)
-- **Event:** `OnBeforePostSalesDoc`
-- **Logic:** Validate customer credit limit before posting
-- **Why:** Need to prevent posting orders that exceed credit limits
-
-**3. Page Extension: Customer Card**
-- **Base Page:** Customer Card (21)
-- **New Controls:** Credit Limit group with fields, real-time remaining credit
-- **Why:** Users need to see and manage credit limits
-
-### Event Subscription Pattern
-
-**Subscribe to:** `Codeunit::"Sales-Post"::OnBeforePostSalesDoc`
-
-**Logic:**
-1. Exit if not sales order
-2. Get customer and calculate outstanding
-3. If blocked AND over limit → Error()
-4. If over warning → Confirm() dialog
-
-(al-developer will implement full event subscriber code)
-
-### Business Logic Components
-
-**Codeunit: Credit Limit Management**
-- `CalculateOutstandingAmount(Customer: Record Customer): Decimal`
-- `CheckCreditLimit(Customer: Record Customer; NewAmount: Decimal): Boolean`
-- `GetCreditUtilizationPct(Customer: Record Customer): Decimal`
-
-### Validation Rules
-
-1. **Credit Limit must be >= 0**
-2. **Warning % must be between 0-100**
-3. **Cannot set Blocked = true if Credit Limit = 0 (unlimited)**
-4. **Credit check only for document type = Order**
-
-### Performance Considerations
-
-- **Outstanding calculation:** Cache per session to avoid repeated queries
-- **Event subscriber:** Exit early for non-order documents
-- **FactBox:** Use FlowFields where possible for real-time calculation
-
-### Error Handling Strategy
-
-- **Hard Block:** Error message with clear reason
-- **Warning:** Dialog with "Continue anyway?" option
-- **Logging:** All checks logged to history table
-- **User-friendly messages:** Include customer name, amounts, limits
-
-### BC Specialist Consultation Summary
-
-[Include relevant insights from BC MCP]
-
-**Consulted:** BC Intelligence MCP
-**Question:** "Best practice for extending sales posting with custom validation?"
-**Recommendation:** Use OnBeforeSalesPost event, exit early for performance, use Error() for hard blocks
-
-### Microsoft Docs References
-
-- [Table Extensions](https://learn.microsoft.com/...)
-- [Event Subscribers](https://learn.microsoft.com/...)
-- [Sales Posting Events](https://learn.microsoft.com/...)
+### Performance/Error Handling/BC Patterns
+[Only for MEDIUM/COMPLEX - skip for SIMPLE]
 
 ### Alternatives Considered
-
-**Alternative 1: Separate Credit Limit Table**
-- **Pros:** More flexible for future features
-- **Cons:** More complex joins, slower queries
-- **Decision:** Rejected - fields on Customer table sufficient
+[Only for MEDIUM/COMPLEX with multiple valid approaches]
 
 ---
 
 ## Part 2: Implementation Plan
 
-### Object Number Allocation
-
-**Range:** 50100-50199 (adjust to your project's range)
-
-| Object Type | Number | Name |
-|-------------|--------|------|
-| Table Ext | 50100 | Customer Ext |
-| Codeunit | 50100 | Credit Limit Mgt. |
-| Codeunit | 50101 | Sales Post Subscriber |
-| Page Ext | 50100 | Customer Card Ext |
-
-**Note:** Verify these numbers don't conflict with existing objects.
+### Object Allocation
+[Object numbers and names table]
 
 ### Files to Create
-
-#### 1. `src/Tables/Tab-Ext50100.CustomerExt.al`
-**Type:** Table Extension
-**Base:** Customer (18)
-**Purpose:** Add credit limit fields
-
-**Fields to Add:**
-- `CreditLimit` (Decimal) - Maximum credit allowed, MinValue: 0, DecimalPlaces: 2:2
-  - Validation: Must be >= 0
-- `CreditLimitWarningPct` (Decimal) - Warning threshold %, MinValue: 0, MaxValue: 100
-- `CreditLimitBlocked` (Boolean) - Hard block if exceeded
-
-**Dependencies:** None (implement first)
-
----
-
-#### 2. `src/Codeunits/Cod50100.CreditLimitMgt.al`
-**Type:** Codeunit
-**Purpose:** Credit limit business logic
-
-**Procedures:**
-- `CalculateOutstandingAmount(CustomerNo: Code[20]): Decimal`
-  - Query open customer ledger entries
-  - Sum remaining amounts
-  - Return total outstanding
-
-- `CheckCreditLimit(CustomerNo: Code[20]; NewAmount: Decimal): Boolean`
-  - Get customer credit limit
-  - If limit = 0, return true (unlimited)
-  - Calculate: (Outstanding + NewAmount) <= CreditLimit
-  - Return validation result
-
-- `GetCreditUtilizationPct(CustomerNo: Code[20]): Decimal`
-  - Calculate outstanding amount
-  - Return (Outstanding / CreditLimit) * 100
-  - Return 0 if unlimited
-
-**Dependencies:** Requires table extension (file 1)
-
----
-
-#### 3. `src/Codeunits/Cod50101.SalesPostSubscriber.al`
-**Type:** Codeunit (Event Subscriber)
-**Purpose:** Validate credit limit on sales posting
-
-**Event Subscription:**
-- Subscribe to: `Codeunit::"Sales-Post"::OnBeforePostSalesDoc`
-- SingleInstance: true
-
-**Logic:**
-1. Exit if not sales order
-2. Get customer record
-3. Exit if credit limit = 0 (unlimited)
-4. Calculate order amount
-5. Check credit limit:
-   - If blocked AND over limit → Error()
-   - If over warning threshold → Confirm() dialog
-   - Otherwise → Continue
-
-**Local Procedures:**
-- `CalculateSalesOrderAmount(SalesHeader: Record "Sales Header"): Decimal`
-  - Sum all line amounts including VAT
-  - Return total
-
-**Dependencies:** Requires table extension (file 1) and codeunit (file 2)
-
----
-
-#### 4. `src/Pages/Pag-Ext50100.CustomerCardExt.al`
-**Type:** Page Extension
-**Base:** Customer Card (21)
-**Purpose:** Display credit limit fields
-
-**Layout Changes:**
-- Add group "Credit Management" after "Blocked" field
-- Add controls:
-  - CreditLimit (editable)
-  - CreditLimitWarningPct (editable)
-  - CreditLimitBlocked (editable)
-  - OutstandingAmount (calculated, read-only)
-
-**Local Procedures:**
-- `GetOutstandingAmount(): Decimal`
-  - Call CreditLimitMgt.CalculateOutstandingAmount
-  - Return current outstanding
-
-**Dependencies:** Requires table extension (file 1) and codeunit (file 2)
-
----
+**For each file:**
+- File path and object type
+- Purpose (1 sentence)
+- Key elements (fields/procedures by NAME only)
+- Dependencies
 
 ### Implementation Sequence
+[Dependency-ordered phases]
+
+### Assumptions
+[List assumptions - plan-reviewer will tag for verification]
+
+---
+
+**Remember:** NO complete AL code. List WHAT to build (names, types, purposes), not HOW (implementation).
+```
+
+## Testability Architecture Standards
+
+See CLAUDE.md section "Testable Architecture Standards" for comprehensive guidance. The solution plan MUST include a "Testability Architecture" section with:
+
+1. **External Dependencies** - ALL dependencies listed (DB tables, system time, HTTP, files, random)
+2. **Required Interfaces** - Complete method signatures for each dependency
+3. **Injection Points** - Where/how dependencies passed as parameters
+4. **Mockable Boundaries** - What gets mocked in tests
+5. **Pure vs. Impure** - Business logic (pure) vs. I/O operations (impure)
+
+**Critical:** test-engineer will review this section. Incomplete testability = plan revision required.
+
+## Assumptions and Verification
+
+**Every plan MUST end with an Assumptions section.** plan-reviewer will tag assumptions with `[VERIFY]` if they require verification before implementation.
+
+### Examples:
+- ✅ "Assumes Customer table (18) has no existing CreditLimit field" → [VERIFY]
+- ✅ "Assumes Sales-Post codeunit (80) exposes OnBeforePostSalesDoc event" → [VERIFY]
+- ✅ "Assumes object number range 50100-50199 is available" → [VERIFY]
+- ❌ "Assumes table extensions support Decimal fields" → No tag (standard AL feature)
+
+## Implementation Sequence
 
 #### Phase 1: Foundation (No dependencies)
 1. ✅ **Create table extension** (file 1)
@@ -595,6 +426,91 @@ If implementation fails:
 
 ---
 
+## Testability Architecture
+
+**Critical:** Every solution must be designed for testability from the start.
+
+### External Dependencies
+
+List ALL dependencies that cannot be directly tested:
+
+- **Database Tables:** Customer (18), Cust. Ledger Entry (21), Sales Header (36)
+- **System Resources:** Current date/time via WorkDate()
+- **External Services:** None
+- **File System:** None
+- **Random/Non-deterministic:** None
+
+### Required Interfaces
+
+Define interfaces with complete method signatures for mockable boundaries:
+
+#### ICustomerRepository
+```al
+interface ICustomerRepository
+{
+    procedure TryGetCustomer(CustomerNo: Code[20]; var Customer: Record Customer): Boolean;
+    procedure GetOutstandingAmount(CustomerNo: Code[20]): Decimal;
+    procedure IsBlocked(CustomerNo: Code[20]): Boolean;
+}
+```
+
+#### ITimeProvider
+```al
+interface ITimeProvider
+{
+    procedure Today(): Date;
+    procedure Now(): Time;
+}
+```
+
+### Injection Points
+
+Specify where/how dependencies will be injected:
+
+- **Credit Limit Validator Codeunit:**
+  - Inject `ICustomerRepository` as parameter to `ValidateCreditLimit()`
+  - Inject `ITimeProvider` as parameter for date-based calculations
+
+- **Sales Posting Event Subscriber:**
+  - Create repository instances using DI pattern
+  - Pass interfaces to validation codeunit
+
+### Mockable Boundaries
+
+Define what gets mocked in tests:
+
+- **Mock Customer Repository:** Returns test customer data without database
+- **Mock Time Provider:** Returns fixed dates for deterministic testing
+- **Mock Order Repository:** Returns test order data
+
+### Pure vs. Impure Operations
+
+**Pure Functions (Business Logic):**
+- `CalculateCreditUtilization(Outstanding, Limit)` - Pure math
+- `DetermineCreditStatus(Utilization, Threshold)` - Pure decision logic
+- `IsWithinCreditLimit(Outstanding, NewAmount, Limit)` - Pure comparison
+
+**Impure Operations (Isolated in Repositories):**
+- `GetOutstandingAmount()` - Database query in ICustomerRepository
+- `Today()` - System call in ITimeProvider
+- `GetOrderLines()` - Database query in IOrderRepository
+
+### Implementation Objects
+
+**Repository Implementations:**
+- `Cod50101."Customer Repository"` - Real database implementation
+- `Cod50102."System Time Provider"` - Real system time
+- `Cod50103."Mock Customer Repository"` - Test implementation
+- `Cod50104."Fixed Time Provider"` - Test implementation
+
+### Test Strategy
+
+- **Unit Tests:** Test pure business logic with mock repositories
+- **Integration Tests:** Test event subscribers with real repositories
+- **Test Coverage:** 100% of business logic, 80% of integration points
+
+---
+
 ## Design Review Checklist
 
 - ✓ Uses table extensions (not base table modification)
@@ -605,34 +521,40 @@ If implementation fails:
 - ✓ Performance considered
 - ✓ Upgrade-safe design
 - ✓ Error handling defined
+- ✓ **Testability architecture defined (interfaces, DI, mocks)**
+- ✓ **All dependencies identified and mockable**
+- ✓ **Pure functions separated from impure operations**
 - ✓ Implementation steps are concrete and actionable
 - ✓ Code templates provided for complex patterns
 - ✓ Dependencies clearly identified
 ```
 
+
 ## Chat Response Format
 
 Return ONLY:
 ```
-Solution plan complete → .dev/02-solution-plan.md
+🟢 Solution plan complete → .dev/02-solution-plan.md (~4.2k tokens)
 
-Architecture summary:
-- X table extensions
-- Y event subscribers
-- Z new pages/page extensions
-- N new codeunits
+**Architecture:**
+- X table extensions, Y event subscribers, Z page extensions
+- N codeunits (business logic, repositories, subscribers)
+- 🏗️ Event-driven design with dependency injection
 
-Implementation summary:
-- M files to create
-- P implementation phases
+**Testability:**
+- ✅ N interfaces defined (ICustomerRepo, ITimeProvider, IOrderRepo)
+- ✅ All dependencies injected as parameters
+- ✅ Pure functions separated from I/O operations
 
-MCP tools used:
-- AL Dependency: [what you looked up, e.g., "Customer table structure, Sales-Post events"]
-- BC Expert: [what you asked, e.g., "Posting validation patterns"]
-- MS Docs: [what you researched, e.g., "Table extension syntax"]
+**Complexity:** [SIMPLE/MEDIUM/COMPLEX] (XX-YY file implementation target)
+
+**MCP Tools Used:**
+- 🔍 AL Dependency: [what you looked up, e.g., "Customer table structure, Sales-Post events"]
+- 🧠 BC Expert: [what you asked, e.g., "Posting validation patterns"]
+- 📚 MS Docs: [what you researched, e.g., "Table extension syntax"]
 - (or "None - used project context only" for SIMPLE features)
 
-Ready for al-developer to implement.
+📋 Ready for user approval → plan-reviewer will review next.
 ```
 
 ## Session Log Entry

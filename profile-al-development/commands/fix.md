@@ -47,6 +47,26 @@ Issue: Email validation logic rejects valid emails with dots
 Root cause: StrPos check is too restrictive
 ```
 
+### Step 1.5: Write Failing Test (Recommended for Non-Trivial Bugs)
+
+For bugs beyond simple compiler errors, write a test that reproduces the bug before fixing it:
+
+1. **Write a test** that exercises the buggy behavior
+2. **Expect it to FAIL** — confirming the bug exists
+3. **If the test PASSES immediately** — your diagnosis is wrong, re-investigate
+
+**Why:** A failing test proves you understand the bug. If the test passes, you're looking at the wrong code.
+
+**Skip this step for:**
+- Compiler errors (AL0132, etc.) — the compiler IS the failing test
+- Typos, missing properties, syntax issues
+- Obvious one-line fixes
+
+**Use this step for:**
+- Logic bugs (wrong calculation, wrong condition)
+- Validation errors (rejects valid input, accepts invalid input)
+- Integration issues (events not firing, wrong data flow)
+
 ### Step 2: Fix Code
 
 Directly edit the file with the fix:

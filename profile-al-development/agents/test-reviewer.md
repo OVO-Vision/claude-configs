@@ -433,17 +433,22 @@ Tests provide good confidence that the implementation works correctly. The minor
 
 Return ONLY:
 ```
-Test review complete → .dev/06-test-review.md
+🟢 Test review complete → .dev/06-test-review.md (~4.1k tokens)
 
-Assessment:
-- Overall grade: [Grade]
-- Requirements coverage: X%
-- Test quality: [High/Medium/Low]
-- Tests passing: Y/Z
+**Assessment:**
+- ⭐ Overall grade: [Excellent (5/5) / Good (4/5) / Adequate (3/5)]
+- 📊 Requirements coverage: X% (Y/Z requirements)
+- ✅ Test quality: [High / Medium / Low]
+- 🧪 Tests passing: Y/Z (XX%)
 
-Recommendation: [Ready for deployment / Minor improvements needed / Significant gaps]
+**Test Metrics:**
+- Total tests: Y
+- Avg duration: X.Xs (performance: [Excellent/Good/Slow])
+- Coverage gaps: N areas
 
-Next: [Manual UI testing / Deployment / Add missing tests]
+**Recommendation:** [✅ Ready for deployment / ⚠️ Minor improvements recommended / 🔴 Significant gaps]
+
+**Next:** [Manual UI testing / Deployment / Add missing tests]
 ```
 
 ## Session Log Entry

@@ -1,6 +1,6 @@
 # AL Development Profile - Full Lifecycle Workflow
 
-**Version:** 2.16.0
+**Version:** 2.18.0
 
 ## 🎯 Core Principles
 
@@ -42,6 +42,7 @@ Main conversation stays clean - agents write detailed results to files, return o
 ├── project-context.md       # Project memory (read first, saves 5-15 min!)
 ├── 01-requirements.md       # Requirements engineering output
 ├── 02-solution-plan.md      # Complete solution design + implementation plan
+├── 02a-plan-review.md       # Adversarial plan review findings
 ├── 03-code-review.md        # Code review findings
 ├── 04-diagnostics.md        # Compiler diagnostics + fixes
 ├── 05-test-plan.md          # Test strategy and plan
@@ -80,9 +81,250 @@ See `task-coordination.md` for full details.
 
 ## 🔄 Development Lifecycle Pipeline
 
-> **Visual diagram:** See `agents/README.md` for detailed ASCII workflow diagram with dependencies.
+### Complete Workflow Diagram (v2.18 TDD Workflow)
 
-### Phase 1: Planning & Design
+```ascii
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          PHASE 1: PLANNING                               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+User Request
+    ↓
+[requirements-engineer] → .dev/01-requirements.md
+    ↓
+╔═══════════════════════════════════╗
+║ APPROVAL GATE 1: Requirements     ║  User reviews requirements
+║ Options: Approve / Refine / Stop  ║
+╚═══════════════════════════════════╝
+    ↓ (Approve)
+[solution-planner] → .dev/02-solution-plan.md
+    │  - Technical design
+    │  - Testability Architecture section:
+    │    * Dependencies list (database, time, HTTP, etc.)
+    │    * Required interfaces with method signatures
+    │    * Injection points (where deps passed as params)
+    │    * Mockable boundaries
+    │    * Pure vs. impure operations
+    ↓
+┌─────────────────────────────────────┐
+│  PLAN REVIEW LOOP                   │
+│                                     │
+│  [plan-reviewer] → .dev/02a-plan-review.md
+│      ↓                              │
+│  Decision:                          │
+│   ├─ APPROVED → exit loop           │
+│   └─ CHANGES REQUIRED → iterate    │
+│         ↓                           │
+│   [solution-planner revises]        │
+│         ↓                           │
+│   [plan-reviewer re-reviews] ─┐    │
+│         ↓                      │    │
+│   If not converged ───────────┘    │
+│   If 3+ cycles → escalate to user  │
+└─────────────────────────────────────┘
+    ↓
+[orchestrator] Verify [VERIFY] assumptions
+    ├─ Glob/Grep/MCP to confirm assumptions
+    └─ If verification fails → solution-planner revises
+    ↓
+╔═══════════════════════════════════╗
+║ APPROVAL GATE 2: Solution Plan    ║  User reviews solution + plan review
+║ Options: Approve / Refine / Stop  ║
+╚═══════════════════════════════════╝
+    ↓ (Approve)
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    PHASE 2: TEST SPECIFICATION                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+[orchestrator] Preflight Check: Test Infrastructure
+    ├─ Check: Test runner app exists (isTest: true)
+    ├─ Check: Test dependencies installed (Microsoft Test libs)
+    ├─ Check: Test helpers/mocks structure exists
+    └─ If missing → ASK USER to set up or skip
+    ↓ (Pass)
+[test-engineer] → .dev/05-test-specification.md
+    │  - Review solution plan testability architecture
+    │  - Flag testability gaps (missing interfaces, hard deps)
+    │  - Design test specifications (WHAT to test, not code)
+    │  - Unit test specs (pure business logic)
+    │  - Integration test specs (workflows)
+    │  - Edge case specs (boundaries, errors)
+    │  - Test data/mock requirements
+    ↓
+╔═══════════════════════════════════╗
+║ APPROVAL GATE 3: Test Strategy    ║  User reviews test approach
+║ Options: Approve / Refine / Stop  ║
+╚═══════════════════════════════════╝
+    ↓ (Approve)
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    PHASE 3: TDD DEVELOPMENT                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+[al-developer] TDD Implementation
+    │  For each feature in test specification:
+    │
+    │  ┌─────────────────────────────────────────┐
+    │  │  TDD CYCLE: RED-GREEN-REFACTOR          │
+    │  │                                          │
+    │  │  1. RED: Write failing test              │
+    │  │     - Implement test codeunit            │
+    │  │     - Implement mock repositories        │
+    │  │     ⚠️  MANUAL: User deploys to BC      │
+    │  │     ⚠️  MANUAL: User runs test          │
+    │  │     ⚠️  MANUAL: User reports FAIL       │
+    │  │     - Test MUST fail (else test is wrong)│
+    │  │     - Document in tdd-log.md             │
+    │  │                                          │
+    │  │  2. GREEN: Make test pass                │
+    │  │     - Implement production code          │
+    │  │     - Implement real interfaces          │
+    │  │     ⚠️  MANUAL: User deploys to BC      │
+    │  │     ⚠️  MANUAL: User runs test          │
+    │  │     ⚠️  MANUAL: User reports PASS       │
+    │  │     - Test MUST pass now                 │
+    │  │     - If fails → iterate until pass      │
+    │  │     - Document in tdd-log.md             │
+    │  │                                          │
+    │  │  3. REFACTOR: Improve code quality       │
+    │  │     - Extract helpers, add docs          │
+    │  │     - No behavior change                 │
+    │  │     ⚠️  MANUAL: User runs ALL tests     │
+    │  │     ⚠️  MANUAL: User reports PASS       │
+    │  │     - All tests still pass               │
+    │  │     - If fails → revert refactoring      │
+    │  │     - Document in tdd-log.md             │
+    │  │                                          │
+    │  │  Repeat for next test specification →   │
+    │  └─────────────────────────────────────────┘
+    │
+    │  Produces:
+    │    - Test codeunits (src/Tests/)
+    │    - Production code (src/)
+    │    - Mock implementations (src/Tests/Mocks/)
+    │    - .dev/03-tdd-log.md (cycle documentation)
+    │
+    │  ⚠️  NOTE: Test execution requires BC server deployment
+    │      Claude Code cannot automate test execution
+    │      Each TDD cycle has manual approval gates
+    ↓
+┌─────────────────────────────────────┐
+│  CODE REVIEW LOOP                   │
+│                                     │
+│  [code-reviewer] → .dev/03-code-review.md
+│      │  - Reviews production code  │
+│      │  - Reviews test code        │
+│      │  - Validates testability:   │
+│      │    * DI compliance           │
+│      │    * Interface usage         │
+│      │    * Pure function patterns  │
+│      │  - Uses Feedback Resolution Protocol
+│      ↓                              │
+│  [al-developer] Dispositions findings
+│      ↓                              │
+│  Decision:                          │
+│   ├─ All resolved + "APPROVED" → exit
+│   └─ ACCEPT-FIX items remain → iterate
+│         ↓                           │
+│   [al-developer implements fixes]  │
+│         ↓                           │
+│   [code-reviewer re-reviews] ───┐  │
+│         ↓                        │  │
+│   If no progress 2x → escalate   │  │
+│   If same issue 3x → escalate    │  │
+└─────────────────────────────────────┘
+    ↓
+╔═══════════════════════════════════╗
+║ APPROVAL GATE 4: Code Review      ║  User reviews code + findings
+║ Options: Approve / Changes / Stop ║
+╚═══════════════════════════════════╝
+    ↓ (Approve)
+[diagnostics-fixer] Compile + analyze
+    │  Run al-compile
+    │  Analyze compiler output
+    │  → .dev/04-diagnostics.md
+    ↓
+┌─────────────────────────────────────┐
+│  DIAGNOSTICS LOOP                   │
+│                                     │
+│  Decision:                          │
+│   ├─ Clean / minor warnings → exit │
+│   ├─ 1-2 errors → fix in loop      │
+│   └─ 3+ errors → iterate           │
+│         ↓                           │
+│   [diagnostics-fixer] Analyze root cause
+│         ↓                           │
+│   If wrong assumptions → back to Planning
+│   If fixable → [al-developer fixes]│
+│         ↓                           │
+│   [Recompile] ───────────────┐     │
+│         ↓                     │     │
+│   If not converging → escalate│     │
+└─────────────────────────────────────┘
+    ↓
+╔═══════════════════════════════════╗
+║ APPROVAL GATE 5: Implementation   ║  User reviews diagnostics + final code
+║ Options: Approve / Fix / Stop     ║
+╚═══════════════════════════════════╝
+    ↓ (Approve)
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    PHASE 4: TEST VALIDATION                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+[test-reviewer] → .dev/06-test-review.md
+    │  - Validate test coverage matches .dev/05-test-specification.md
+    │  - Check all specs were implemented
+    │  - Review test code quality
+    │  - Verify mocks are correct
+    │  - Confirm testability standards followed
+    ↓
+╔═══════════════════════════════════╗
+║ FINAL: Tests Validated            ║
+╚═══════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SUPPORT AGENTS (On-Demand)                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Available at any phase:
+- [bc-expert] - BC specialist consultations via MCP
+- [docs-lookup] - Microsoft Docs search via MCP
+- [dependency-navigator] - Base app navigation via MCP
+- [interview] - Deep requirements gathering
+
+Loop Governance (applies to all loops):
+- Progress indicators: ACCEPT-FIX count decreasing, errors decreasing
+- Stall detection: If no progress 2 consecutive iterations → escalate
+- Escalation triggers: Same feedback 3x, circular dependencies
+```
+
+### Quick Summary (v2.18 TDD Workflow)
+
+**Phase 1: Planning**
+- requirements-engineer → Requirements
+- solution-planner → Architecture + Testability
+- plan-reviewer → Adversarial review
+- User approval gate
+
+**Phase 2: Test Specification** (NEW)
+- Preflight check (test infrastructure)
+- test-engineer → Test specifications (WHAT to test)
+- User approval gate
+
+**Phase 3: TDD Development**
+- al-developer → RED-GREEN-REFACTOR cycles
+- Manual test execution by user (BC server required)
+- code-reviewer → Validate testability + quality
+- diagnostics-fixer → Compilation
+- User approval gate
+
+**Phase 4: Test Validation**
+- test-reviewer → Coverage validation
+- Final approval
+
+### Phase 1: Planning & Design (Traditional View)
 ```
 User Request
     ↓
@@ -91,32 +333,111 @@ User Request
 2. solution-planner → 02-solution-plan.md (uses BC MCP + MS Docs + codebase exploration)
    - Architecture & design rationale
    - Implementation steps & code templates
-   - All in one comprehensive document
+   - Explicit assumptions list
+   - **NEW:** Testability Architecture section
+    ↓
+3. plan-reviewer → 02a-plan-review.md (adversarial review)
+   - Challenges assumptions, finds gaps, checks scope
+   - Tags critical assumptions with [VERIFY]
+   ├─ APPROVED → verify [VERIFY] items → user approval gate
+   └─ CHANGES REQUIRED → solution-planner revises (max 3 cycles)
 ```
 
-### Phase 2: Development & Quality (Iterative)
+### Phase 2: Test Specification (NEW in v2.18)
 ```
-3. al-developer → writes AL code (reads 02-solution-plan.md)
-    ↓
-4. code-reviewer → 03-code-review.md
-    ├─ If Critical/High issues → ITERATE back to al-developer (step 3)
-    └─ If only Medium/Low → Continue
-    ↓
-5. diagnostics-fixer → 04-diagnostics.md + auto-fixes safe issues
-    ├─ If complex errors (3+ or logic issues) → ITERATE back to al-developer (step 3)
-    └─ If minor/no errors → Continue to testing
-
-Iteration continues until code quality is acceptable (no Critical/High issues, clean/minor compilation)
+4. test-engineer → 05-test-specification.md
+   - Reviews solution plan for testability gaps
+   - Designs test specifications (not code)
+   - Unit tests, integration tests, edge cases
+   - User approval gate
 ```
 
-### Phase 3: Testing & Validation
+### Phase 3: TDD Development & Quality (Iterative)
 ```
-6. test-engineer → 05-test-plan.md + writes test code
+5. al-developer → writes test code + production code via TDD
+   - RED: Write failing test (user confirms FAIL)
+   - GREEN: Write production code (user confirms PASS)
+   - REFACTOR: Improve code (user confirms all PASS)
+   - Produces: tests + code + tdd-log.md
     ↓
-7. test-reviewer → 06-test-review.md
+6. code-reviewer → 03-code-review.md (validates testability + quality)
+    ├─ CHANGES REQUIRED → al-developer dispositions & fixes → re-review
+    └─ APPROVED → Continue
+    ↓
+7. diagnostics-fixer → 04-diagnostics.md + auto-fixes safe issues
+    ├─ If complex errors (3+ or logic issues) → ITERATE back to al-developer
+    └─ If minor/no errors → Continue to validation
+
+Iteration uses Feedback Resolution Protocol (see feedback-resolution.md).
+Stall detection: if no progress for 2 iterations, escalate to user.
+```
+
+### Phase 4: Test Validation (Replaces Testing & Validation)
+```
+8. test-reviewer → 06-test-review.md
+   - Validates coverage matches test specification
+   - Reviews test quality
     ↓
 Done ✓
 ```
+
+## 📋 Checkpoint Decision Tables
+
+Explicit decision rules at each workflow boundary. Replaces prose-based iteration logic.
+
+| After Step | Condition | Decision |
+|------------|-----------|----------|
+| Requirements | Clear and complete | → Planning |
+| Requirements | Contradicts known constraints | → Pause, confirm with user |
+| Solution Plan | Plan-reviewer APPROVED | → Verify [VERIFY] items → User approval gate |
+| Solution Plan | Plan-reviewer CHANGES REQUIRED | → Revise plan (max 3 cycles) |
+| Solution Plan | Verification fails ([VERIFY] item wrong) | → Revise plan with correct assumptions |
+| Solution Plan | Cannot converge after 3 cycles | → Escalate to user |
+| Development | Code compiles, review passed | → Diagnostics |
+| Code Review | CHANGES REQUIRED (CRITICAL/SERIOUS) | → ITERATE to al-developer |
+| Code Review | APPROVED (only MINOR) | → Continue to diagnostics |
+| Diagnostics | Clean or minor | → User approval / testing |
+| Diagnostics | 3+ complex errors | → ITERATE to al-developer |
+| Diagnostics | Wrong root cause revealed | → Back to planning |
+
+## 🔄 Feedback Resolution Protocol
+
+All review agents (plan-reviewer, code-reviewer) use the **Feedback Resolution Protocol** defined in `feedback-resolution.md`.
+
+Key points:
+- **Severity levels:** CRITICAL / SERIOUS / MINOR
+- **Dispositions:** ACCEPT-FIX / ACCEPT-DEFER / ACKNOWLEDGE / DISMISS
+- **CRITICAL must be ACCEPT-FIX** — no exceptions
+- **DISMISS requires reasoning**
+- **Exit condition:** All items dispositioned, no ACCEPT-FIX remaining, reviewer states "APPROVED"
+
+See `feedback-resolution.md` for full protocol.
+
+## 🔒 Loop Governance
+
+Prevents infinite iteration loops with progress tracking and escalation.
+
+### Progress Indicators
+
+At least one of these must improve each iteration:
+- Number of open ACCEPT-FIX items decreasing
+- Compilation error count decreasing
+- Review severity trending down (CRITICAL → SERIOUS → MINOR)
+
+### Stall Detection
+
+**Escalate to user if:**
+- No progress for 2 consecutive iterations (same metrics, same findings)
+- Same feedback appears 3+ times across iterations
+- Circular fix dependencies (fixing A breaks B, fixing B breaks A)
+- DISMISS disputed after rebuttal (reviewer and developer disagree)
+
+### Escalation Format
+
+When escalating, present to user:
+- What was attempted (iterations so far)
+- What's blocking (specific findings that won't resolve)
+- Options: manual intervention, change approach, accept current state
 
 ## 🛑 CRITICAL: Approval Gates in Workflows
 
@@ -450,17 +771,18 @@ Claude: [spawns solution-planner again, reads 01-requirements.md + user feedback
 Agent: [updates .dev/02-solution-plan.md with revised approach]
 ```
 
-## 📋 Agent Capabilities Matrix
+## 📋 Agent Capabilities Matrix (v2.18 TDD Workflow)
 
-| Agent | Input | Output | MCP Tools |
-|-------|-------|--------|-----------|
-| requirements-engineer | User request | 01-requirements.md | None |
-| solution-planner | 01-requirements.md | 02-solution-plan.md | All 3 |
-| al-developer | 02-solution-plan.md | AL code files | None |
-| code-reviewer | Code files | 03-code-review.md | None |
-| diagnostics-fixer | Compiler output | 04-diagnostics.md | None |
-| test-engineer | 02+code | 05-test-plan.md | None |
-| test-reviewer | Test code | 06-test-review.md | None |
+| Agent | When Runs | Input | Output | MCP Tools |
+|-------|-----------|-------|--------|-----------|
+| requirements-engineer | Phase 1 | User request | 01-requirements.md | None |
+| solution-planner | Phase 1 | 01-requirements.md | 02-solution-plan.md (with testability) | All 3 |
+| plan-reviewer | Phase 1 | 02-solution-plan.md | 02a-plan-review.md | None |
+| test-engineer | Phase 2 | 01+02 (NO code yet) | 05-test-specification.md | None |
+| al-developer | Phase 3 | 02+05 | Tests + Production code + tdd-log | None |
+| code-reviewer | Phase 3 | Test + Production code | 03-code-review.md (validates testability) | None |
+| diagnostics-fixer | Phase 3 | Compiler output | 04-diagnostics.md | None |
+| test-reviewer | Phase 4 | 05 + Test code | 06-test-review.md (validates coverage) | None |
 
 > **Full details:** See `agents/README.md` for complete dependency matrix, tool access, iteration rules, and workflow diagrams.
 
@@ -501,6 +823,488 @@ Agent: [updates .dev/02-solution-plan.md with revised approach]
 - **Cautious with LOCKTABLE** in multi-user scenarios
 - **Batch operations** for bulk data
 
+## 🧪 Testable Architecture Standards
+
+**WHY:** With 500+ tests, confidence in test correctness is critical. Only Test-Driven Development provides this confidence. Testable architecture prevents massive redesigns later.
+
+### Core Principles
+
+1. **Dependency Injection** - Accept dependencies, never create internally
+2. **Interface-Based Design** - Program to interfaces, not implementations
+3. **Pure vs. Impure Separation** - Isolate side effects from business logic
+4. **Database Access Isolation** - Repository pattern for all data access
+
+### 1. Dependency Injection Pattern
+
+#### ❌ UNTESTABLE - Direct Dependencies
+```al
+codeunit 50100 "Credit Limit Validator"
+{
+    procedure ValidateCreditLimit(CustomerNo: Code[20]): Boolean
+    var
+        Customer: Record Customer;
+        CustLedgerEntry: Record "Cust. Ledger Entry";
+        Outstanding: Decimal;
+    begin
+        // ❌ Direct database access - cannot mock for testing
+        Customer.Get(CustomerNo);
+
+        // ❌ Direct database query - cannot test without real data
+        CustLedgerEntry.SetRange("Customer No.", CustomerNo);
+        CustLedgerEntry.SetRange(Open, true);
+        if CustLedgerEntry.FindSet() then
+            repeat
+                Outstanding += CustLedgerEntry."Remaining Amount";
+            until CustLedgerEntry.Next() = 0;
+
+        // ❌ Uses system time - not deterministic
+        exit(Outstanding + GetTodaysOrders(CustomerNo) <= Customer.CreditLimit);
+    end;
+}
+```
+
+**Problems:**
+- Cannot test without live database
+- Cannot mock customer data
+- Cannot control "today's date" for testing
+- Massive redesign needed to add tests later
+
+#### ✅ TESTABLE - Injected Dependencies
+```al
+codeunit 50100 "Credit Limit Validator"
+{
+    procedure ValidateCreditLimit(
+        CustomerNo: Code[20];
+        CustomerRepository: Interface ICustomerRepository;
+        OrderRepository: Interface IOrderRepository;
+        TimeProvider: Interface ITimeProvider
+    ): Boolean
+    var
+        Customer: Record Customer;
+        Outstanding: Decimal;
+        TodaysOrders: Decimal;
+    begin
+        // ✅ Get customer via repository interface (mockable)
+        if not CustomerRepository.TryGetCustomer(CustomerNo, Customer) then
+            Error('Customer %1 not found', CustomerNo);
+
+        // ✅ Calculate outstanding via repository (mockable)
+        Outstanding := CustomerRepository.GetOutstandingAmount(CustomerNo);
+
+        // ✅ Get today's orders using time provider (deterministic)
+        TodaysOrders := OrderRepository.GetOrdersForDate(
+            CustomerNo,
+            TimeProvider.Today()
+        );
+
+        // ✅ Pure business logic - easy to test
+        exit(Outstanding + TodaysOrders <= Customer.CreditLimit);
+    end;
+}
+```
+
+**Benefits:**
+- Test with mock repositories (no database)
+- Control all inputs precisely
+- Deterministic test outcomes
+- Fast tests (no I/O)
+
+### 2. Interface Definitions
+
+Define interfaces for all external dependencies:
+
+#### ICustomerRepository
+```al
+interface ICustomerRepository
+{
+    /// <summary>
+    /// Attempt to retrieve a customer record.
+    /// </summary>
+    procedure TryGetCustomer(CustomerNo: Code[20]; var Customer: Record Customer): Boolean;
+
+    /// <summary>
+    /// Calculate total outstanding amount for customer.
+    /// </summary>
+    procedure GetOutstandingAmount(CustomerNo: Code[20]): Decimal;
+
+    /// <summary>
+    /// Check if customer is blocked.
+    /// </summary>
+    procedure IsBlocked(CustomerNo: Code[20]): Boolean;
+}
+```
+
+#### IOrderRepository
+```al
+interface IOrderRepository
+{
+    /// <summary>
+    /// Get total order amounts for customer on specific date.
+    /// </summary>
+    procedure GetOrdersForDate(CustomerNo: Code[20]; OrderDate: Date): Decimal;
+
+    /// <summary>
+    /// Get all open orders for customer.
+    /// </summary>
+    procedure GetOpenOrders(CustomerNo: Code[20]; var SalesHeader: Record "Sales Header"): Boolean;
+}
+```
+
+#### ITimeProvider
+```al
+interface ITimeProvider
+{
+    /// <summary>
+    /// Get current date (mockable for tests).
+    /// </summary>
+    procedure Today(): Date;
+
+    /// <summary>
+    /// Get current time (mockable for tests).
+    /// </summary>
+    procedure Now(): Time;
+}
+```
+
+#### Implementation Codeunits
+```al
+codeunit 50101 "Customer Repository" implements ICustomerRepository
+{
+    // Real implementation using database
+    procedure TryGetCustomer(CustomerNo: Code[20]; var Customer: Record Customer): Boolean
+    begin
+        exit(Customer.Get(CustomerNo));
+    end;
+
+    procedure GetOutstandingAmount(CustomerNo: Code[20]): Decimal
+    var
+        CustLedgerEntry: Record "Cust. Ledger Entry";
+        Outstanding: Decimal;
+    begin
+        CustLedgerEntry.SetRange("Customer No.", CustomerNo);
+        CustLedgerEntry.SetRange(Open, true);
+        if CustLedgerEntry.FindSet() then
+            repeat
+                Outstanding += CustLedgerEntry."Remaining Amount";
+            until CustLedgerEntry.Next() = 0;
+        exit(Outstanding);
+    end;
+
+    // ... other implementations
+}
+
+codeunit 50102 "System Time Provider" implements ITimeProvider
+{
+    // Real implementation using system
+    procedure Today(): Date
+    begin
+        exit(WorkDate());
+    end;
+
+    procedure Now(): Time
+    begin
+        exit(Time());
+    end;
+}
+
+codeunit 50103 "Mock Customer Repository" implements ICustomerRepository
+{
+    // Test implementation with predictable data
+    var
+        MockCustomers: List of [Record Customer];
+        MockOutstanding: Dictionary of [Code[20], Decimal];
+
+    procedure AddMockCustomer(Customer: Record Customer; Outstanding: Decimal)
+    begin
+        MockCustomers.Add(Customer);
+        MockOutstanding.Add(Customer."No.", Outstanding);
+    end;
+
+    procedure TryGetCustomer(CustomerNo: Code[20]; var Customer: Record Customer): Boolean
+    var
+        MockCust: Record Customer;
+    begin
+        foreach MockCust in MockCustomers do
+            if MockCust."No." = CustomerNo then begin
+                Customer := MockCust;
+                exit(true);
+            end;
+        exit(false);
+    end;
+
+    procedure GetOutstandingAmount(CustomerNo: Code[20]): Decimal
+    begin
+        if MockOutstanding.ContainsKey(CustomerNo) then
+            exit(MockOutstanding.Get(CustomerNo));
+        exit(0);
+    end;
+
+    // ... other mock implementations
+}
+```
+
+### 3. Pure vs. Impure Functions
+
+#### Pure Functions (Preferred)
+- **Input:** Only parameters
+- **Output:** Only return value
+- **No side effects:** No database, no global state, no I/O
+- **Deterministic:** Same input = same output always
+
+```al
+// ✅ Pure function - easy to test
+procedure CalculateCreditUtilization(Outstanding: Decimal; CreditLimit: Decimal): Decimal
+begin
+    if CreditLimit = 0 then
+        exit(0); // Unlimited
+    exit((Outstanding / CreditLimit) * 100);
+end;
+
+// ✅ Pure function - testable logic
+procedure DetermineCreditStatus(Utilization: Decimal; WarningThreshold: Decimal): Enum "Credit Status"
+begin
+    if Utilization >= 100 then
+        exit("Credit Status"::Blocked);
+    if Utilization >= WarningThreshold then
+        exit("Credit Status"::Warning);
+    exit("Credit Status"::OK);
+end;
+```
+
+#### Impure Functions (Isolate)
+- **Side effects:** Database, files, HTTP, time, random
+- **Isolate in repositories/services**
+- **Inject into business logic**
+
+```al
+// ✅ Impure function - isolated in repository
+codeunit 50101 "Customer Repository"
+{
+    procedure GetOutstandingAmount(CustomerNo: Code[20]): Decimal
+    var
+        CustLedgerEntry: Record "Cust. Ledger Entry";
+        Outstanding: Decimal;
+    begin
+        // Impure: database access isolated here
+        CustLedgerEntry.SetRange("Customer No.", CustomerNo);
+        CustLedgerEntry.SetRange(Open, true);
+        if CustLedgerEntry.FindSet() then
+            repeat
+                Outstanding += CustLedgerEntry."Remaining Amount";
+            until CustLedgerEntry.Next() = 0;
+        exit(Outstanding);
+    end;
+}
+```
+
+### 4. Repository Pattern for Database Access
+
+**Rule:** Business logic codeunits NEVER access tables directly. Use repositories.
+
+```al
+// ❌ BAD - business logic mixed with database access
+codeunit 50100 "Order Validator"
+{
+    procedure ValidateOrder(SalesHeader: Record "Sales Header"): Boolean
+    var
+        Customer: Record Customer;
+        Item: Record Item;
+        SalesLine: Record "Sales Line";
+    begin
+        Customer.Get(SalesHeader."Sell-to Customer No.");
+        SalesLine.SetRange("Document Type", SalesHeader."Document Type");
+        SalesLine.SetRange("Document No.", SalesHeader."No.");
+        if SalesLine.FindSet() then
+            repeat
+                Item.Get(SalesLine."No.");
+                if Item.Blocked then
+                    exit(false);
+            until SalesLine.Next() = 0;
+        // Mixed concerns: validation + data access
+    end;
+}
+
+// ✅ GOOD - repository handles data, logic is pure
+codeunit 50100 "Order Validator"
+{
+    procedure ValidateOrder(
+        OrderHeader: Record "Sales Header";
+        CustomerRepo: Interface ICustomerRepository;
+        OrderRepo: Interface IOrderRepository
+    ): Boolean
+    var
+        Customer: Record Customer;
+        OrderLines: List of [Record "Sales Line"];
+        Line: Record "Sales Line";
+    begin
+        // Get data via repository
+        if not CustomerRepo.TryGetCustomer(OrderHeader."Sell-to Customer No.", Customer) then
+            exit(false);
+
+        if Customer.Blocked <> Customer.Blocked::" " then
+            exit(false);
+
+        // Get order lines via repository
+        OrderRepo.GetOrderLines(OrderHeader, OrderLines);
+
+        // Pure business logic
+        foreach Line in OrderLines do
+            if not ValidateLine(Line, OrderRepo) then
+                exit(false);
+
+        exit(true);
+    end;
+
+    local procedure ValidateLine(
+        Line: Record "Sales Line";
+        OrderRepo: Interface IOrderRepository
+    ): Boolean
+    begin
+        // Pure validation logic (item blocking check delegated to repo)
+        exit(not OrderRepo.IsItemBlocked(Line."No."));
+    end;
+}
+```
+
+### When to Create Interfaces Checklist
+
+Create an interface when your code needs to:
+
+- [ ] **Access database tables** → `ICustomerRepository`, `IOrderRepository`
+- [ ] **Get current time/date** → `ITimeProvider`
+- [ ] **Call HTTP APIs** → `IApiClient`, `IHttpService`
+- [ ] **Access file system** → `IFileService`
+- [ ] **Generate random numbers** → `IRandomProvider`
+- [ ] **Send emails/notifications** → `INotificationService`
+- [ ] **Log/telemetry** → `ILogger`
+- [ ] **Configuration/settings** → `IConfigurationService`
+
+### Testable Architecture Example: Credit Limit Feature
+
+#### Business Logic (Pure)
+```al
+codeunit 50100 "Credit Limit Validator"
+{
+    procedure ValidateCreditLimit(
+        CustomerNo: Code[20];
+        NewOrderAmount: Decimal;
+        CustomerRepo: Interface ICustomerRepository;
+        OrderRepo: Interface IOrderRepository
+    ): Boolean
+    var
+        Customer: Record Customer;
+        Outstanding: Decimal;
+        TotalExposure: Decimal;
+    begin
+        // Get data via repositories (mockable)
+        if not CustomerRepo.TryGetCustomer(CustomerNo, Customer) then
+            Error('Customer not found');
+
+        if Customer.CreditLimit = 0 then
+            exit(true); // Unlimited
+
+        Outstanding := CustomerRepo.GetOutstandingAmount(CustomerNo);
+        TotalExposure := Outstanding + NewOrderAmount;
+
+        // Pure business logic
+        exit(TotalExposure <= Customer.CreditLimit);
+    end;
+}
+```
+
+#### Test Codeunit
+```al
+codeunit 50200 "Credit Limit Tests"
+{
+    Subtype = Test;
+
+    [Test]
+    procedure TestCreditLimit_WithinLimit_AllowsOrder()
+    var
+        Validator: Codeunit "Credit Limit Validator";
+        MockCustomerRepo: Codeunit "Mock Customer Repository";
+        MockOrderRepo: Codeunit "Mock Order Repository";
+        Customer: Record Customer;
+        Result: Boolean;
+    begin
+        // [GIVEN] Customer with 10000 credit limit and 5000 outstanding
+        CreateMockCustomer(Customer, 'C001', 10000);
+        MockCustomerRepo.AddMockCustomer(Customer, 5000);
+
+        // [WHEN] Validating new order of 3000
+        Result := Validator.ValidateCreditLimit(
+            'C001',
+            3000,
+            MockCustomerRepo,
+            MockOrderRepo
+        );
+
+        // [THEN] Order is allowed (5000 + 3000 = 8000 < 10000)
+        Assert.IsTrue(Result, 'Should allow order within credit limit');
+    end;
+
+    [Test]
+    procedure TestCreditLimit_OverLimit_BlocksOrder()
+    var
+        Validator: Codeunit "Credit Limit Validator";
+        MockCustomerRepo: Codeunit "Mock Customer Repository";
+        MockOrderRepo: Codeunit "Mock Order Repository";
+        Customer: Record Customer;
+        Result: Boolean;
+    begin
+        // [GIVEN] Customer with 10000 credit limit and 8000 outstanding
+        CreateMockCustomer(Customer, 'C001', 10000);
+        MockCustomerRepo.AddMockCustomer(Customer, 8000);
+
+        // [WHEN] Validating new order of 3000
+        Result := Validator.ValidateCreditLimit(
+            'C001',
+            3000,
+            MockCustomerRepo,
+            MockOrderRepo
+        );
+
+        // [THEN] Order is blocked (8000 + 3000 = 11000 > 10000)
+        Assert.IsFalse(Result, 'Should block order over credit limit');
+    end;
+
+    local procedure CreateMockCustomer(
+        var Customer: Record Customer;
+        CustomerNo: Code[20];
+        CreditLimit: Decimal
+    )
+    begin
+        Customer.Init();
+        Customer."No." := CustomerNo;
+        Customer.CreditLimit := CreditLimit;
+    end;
+}
+```
+
+### Benefits of Testable Architecture
+
+1. **Test Confidence** - Tests that verify mocks = confidence in test correctness
+2. **Fast Tests** - No database = tests run in milliseconds
+3. **Deterministic** - No time dependencies = reliable tests
+4. **Early Design** - Forces thinking about dependencies upfront
+5. **No Redesign** - Architecture supports testing from day 1
+6. **Clear Boundaries** - Interfaces show what can be mocked
+
+### Migration Strategy for Existing Code
+
+If you have untestable code:
+
+1. **Identify dependencies** - Database, time, HTTP, files
+2. **Extract interfaces** - Define IRepository, ITimeProvider, etc.
+3. **Inject dependencies** - Add parameters to procedures
+4. **Create mocks** - Implement test versions
+5. **Write tests** - Use mocks to test business logic
+6. **Refactor gradually** - One module at a time
+
+### Key Takeaway
+
+**Design for testability from the start.** Adding tests to untestable code requires massive redesign. With dependency injection and interfaces, tests are natural and give true confidence in correctness.
+
 ## 📝 Standard Event Pattern
 
 ```al
@@ -529,9 +1333,10 @@ if not SomeCondition then
 ### Workflow 0: Quick Bug Fix (Fastest - 5 minutes)
 ```
 1. /fix "Error message or bug description"
-2. Review proposed fix
-3. Approve → diagnostics run
-4. Done! Commit the fix
+2. (Recommended for non-trivial bugs: write failing test first)
+3. Review proposed fix
+4. Approve → diagnostics run
+5. Done! Commit the fix
 ```
 
 **Best for:**
@@ -539,6 +1344,8 @@ if not SomeCondition then
 - Small logic bugs
 - Validation errors
 - Quick corrections
+
+**TDD option:** For logic bugs, write a failing test first to confirm diagnosis. If the test passes immediately, the diagnosis is wrong. See `/fix` command for details.
 
 **Skips:** Planning, design, testing (just fix + verify)
 
@@ -697,3 +1504,12 @@ A complete development cycle produces:
 ---
 
 *This profile enables full-lifecycle AL development with collaborative agents and document-driven workflow.*
+
+
+<claude-mem-context>
+# Recent Activity
+
+<!-- This section is auto-generated by claude-mem. Edit content outside the tags. -->
+
+*No recent activity*
+</claude-mem-context>

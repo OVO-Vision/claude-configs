@@ -159,12 +159,18 @@ Customer.CalcFields(Balance);
 
 Return ONLY:
 ```
-Microsoft Docs lookup complete → .dev/docs-[topic].md
+🟢 Microsoft Docs lookup complete → .dev/docs-[topic].md (~1.8k tokens)
 
-Found: [X articles]
-Key info: [One-line summary]
+**Results:**
+- 📚 Found: X articles
+- 🔍 Primary topic: [Topic name]
+- 📖 Key info: [One-line summary]
 
-[If relevant: "See file for API reference and code examples"]
+**Top Articles:**
+1. [Article title] - [Brief relevance]
+2. [Article title] - [Brief relevance]
+
+📚 See file for API reference, code examples, and official documentation links.
 ```
 
 ## Session Log Entry
