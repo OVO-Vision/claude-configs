@@ -577,7 +577,7 @@ Before marking a file complete:
 - [ ] Includes error handling
 - [ ] Has proper DataClassification
 - [ ] Uses ApplicationArea = All for fields/actions
-- [ ] Has meaningful ToolTips
+- [ ] Has meaningful ToolTips (not generic "Specifies the value of...")
 
 ## Handling Missing Information
 
@@ -738,6 +738,12 @@ Error('Err');
 
 // Using Find('-')
 if Customer.Find('-') then
+
+// Generic tooltip — says nothing useful
+field("Credit Limit"; Rec."Credit Limit")
+{
+    ToolTip = 'Specifies the value of the Credit Limit field.';
+}
 ```
 
 ### ✅ Do:
@@ -759,6 +765,12 @@ Error('Credit limit cannot be negative. Value: %1', CreditLimit);
 
 // Using FindFirst or FindSet
 if Customer.FindFirst() then
+
+// Meaningful tooltip — explains purpose to the user
+field("Credit Limit"; Rec."Credit Limit")
+{
+    ToolTip = 'The maximum amount of outstanding balance allowed for this customer before orders are blocked.';
+}
 ```
 
 ## Handoff to code-reviewer

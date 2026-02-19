@@ -36,7 +36,20 @@ Review AL code for adherence to AL/BC best practices, naming conventions, and de
 - Page extension organization
 - Codeunit responsibilities (single responsibility?)
 
-### 4. Code Organization
+### 4. Tooltip Quality
+- Tooltips must be meaningful and explain the field's purpose to the user
+- **"Specifies the value of [field]"** and similar generic tooltips are NOT acceptable — flag as High Priority
+- Good tooltips describe what the field does, why it matters, or how it affects behavior
+
+```al
+// ❌ Bad — generic, adds no value
+ToolTip = 'Specifies the value of the Credit Limit field.';
+
+// ✅ Good — explains meaning and impact
+ToolTip = 'The maximum amount of outstanding balance allowed for this customer before orders are blocked.';
+```
+
+### 5. Code Organization
 - Logical grouping of methods
 - Clear separation of concerns
 - Consistent patterns across codebase
