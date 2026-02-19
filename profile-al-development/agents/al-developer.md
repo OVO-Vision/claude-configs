@@ -395,6 +395,82 @@ pageextension [Number] "[Name]" extends [BasePage]
 }
 ```
 
+## Page Design Rules
+
+### AutoSplitKey for Line No. Tables
+
+When a table's primary key ends with a `Line No.` field (e.g., `"Document No.","Line No."`), list pages using that table as their source must:
+
+1. **Set `AutoSplitKey = true`** on the page — BC will automatically assign line numbers between existing lines
+2. **Do NOT add any primary key fields to the page layout** — this includes both the parent key fields (e.g., `Document No.`, `Journal No.`) and the `Line No.` field. These are set via the page's context (SubPageLink, filters) and auto-incremented respectively — users should never see or enter them manually on the list page.
+
+```al
+// Example: Table with composite primary key ending in Line No.
+table 50100 "ABC Journal Line"
+{
+    fields
+    {
+        field(1; "Journal No."; Code[20]) { }
+        field(2; "Line No."; Integer) { }
+        field(3; "Account No."; Code[20]) { }
+        field(4; Amount; Decimal) { }
+        // ...
+    }
+    keys
+    {
+        key(PK; "Journal No.", "Line No.") { Clustered = true; }
+    }
+}
+
+// ✅ Correct: AutoSplitKey set, all PK fields omitted from layout
+page 50100 "ABC Journal Lines"
+{
+    PageType = List;
+    SourceTable = "ABC Journal Line";
+    AutoSplitKey = true;  // BC handles Line No. assignment
+
+    layout
+    {
+        area(Content)
+        {
+            repeater(Lines)
+            {
+                // Primary key fields (Journal No., Line No.) intentionally omitted
+                field("Account No."; Rec."Account No.") { }
+                field(Amount; Rec.Amount) { }
+                // ... other non-PK fields
+            }
+        }
+    }
+}
+```
+
+```al
+// ❌ Wrong: Missing AutoSplitKey, PK fields exposed to user
+page 50100 "ABC Journal Lines"
+{
+    PageType = List;
+    SourceTable = "ABC Journal Line";
+    // AutoSplitKey missing!
+
+    layout
+    {
+        area(Content)
+        {
+            repeater(Lines)
+            {
+                field("Journal No."; Rec."Journal No.") { }  // PK field — don't show
+                field("Line No."; Rec."Line No.") { }        // PK field — don't show
+                field("Account No."; Rec."Account No.") { }
+                field(Amount; Rec.Amount) { }
+            }
+        }
+    }
+}
+```
+
+This applies to all list-type pages (List, ListPart, Worksheet) where the source table has `Line No.` as the last primary key field.
+
 ## Compilation Strategy
 
 ### After Each File
